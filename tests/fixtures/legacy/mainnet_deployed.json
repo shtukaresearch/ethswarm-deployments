@@ -1,0 +1,35 @@
+{
+  "contracts": {
+    "bzzToken": {
+      "address": "0x1234567890123456789012345678901234567890",
+      "block": 25527075,
+      "abi": [
+        {
+          "type": "event",
+          "name": "Transfer",
+          "inputs": [
+            {"name": "from", "type": "address", "indexed": true},
+            {"name": "to", "type": "address", "indexed": true},
+            {"name": "value", "type": "uint256", "indexed": false}
+          ]
+        }
+      ],
+      "bytecode": "0x60806040",
+      "url": "https://gnosisscan.io/address/0x1234567890123456789012345678901234567890"
+    },
+    "staking": {
+      "address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "block": 25527080,
+      "abi": [
+        {
+          "type": "event",
+          "name": "StakeUpdated",
+          "inputs": [
+            {"name": "overlay", "type": "bytes32", "indexed": true},
+            {"name": "stakeAmount", "type": "uint256", "indexed": false}
+          ]
+        }
+      ]
+    }
+  }
+}

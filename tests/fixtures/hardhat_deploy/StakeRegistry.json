@@ -1,0 +1,23 @@
+{
+  "address": "0xbbcdefabcdefabcdefabcdefabcdefabcdefabcd",
+  "abi": [
+    {
+      "type": "event",
+      "name": "StakeUpdated",
+      "inputs": [
+        {"name": "overlay", "type": "bytes32", "indexed": true},
+        {"name": "stakeAmount", "type": "uint256", "indexed": false}
+      ]
+    }
+  ],
+  "receipt": {
+    "blockNumber": 27391088,
+    "transactionHash": "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901"
+  },
+  "transactionHash": "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901",
+  "bytecode": "0x608060405234801561001057600080fd5b50604051",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100",
+  "args": [],
+  "solcInputHash": "def456ghi789",
+  "numDeployments": 1
+}

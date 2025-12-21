@@ -1,0 +1,150 @@
+{
+  "metadata": {
+    "generated_at": "2025-12-21 12:00:00 UTC",
+    "source_repo": "https://github.com/ethersphere/storage-incentives",
+    "networks": ["mainnet", "testnet"]
+  },
+  "networks": {
+    "mainnet": {
+      "chain_id": 100,
+      "chain_name": "Gnosis Chain",
+      "block_explorer_url": "https://gnosisscan.io",
+      "versions": {
+        "v0.1.0": {
+          "contracts": {
+            "Token": {
+              "address": "0x1234567890123456789012345678901234567890",
+              "block": 25527075,
+              "timestamp": 1671456789,
+              "abi": [
+                {
+                  "type": "event",
+                  "name": "Transfer",
+                  "inputs": [
+                    {"name": "from", "type": "address", "indexed": true},
+                    {"name": "to", "type": "address", "indexed": true},
+                    {"name": "value", "type": "uint256", "indexed": false}
+                  ]
+                }
+              ],
+              "url": "https://gnosisscan.io/address/0x1234567890123456789012345678901234567890",
+              "source_format": "legacy",
+              "bytecode": "0x60806040"
+            },
+            "StakeRegistry": {
+              "address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+              "block": 25527080,
+              "timestamp": 1671456794,
+              "abi": [
+                {
+                  "type": "event",
+                  "name": "StakeUpdated",
+                  "inputs": [
+                    {"name": "overlay", "type": "bytes32", "indexed": true},
+                    {"name": "stakeAmount", "type": "uint256", "indexed": false}
+                  ]
+                }
+              ],
+              "url": "https://gnosisscan.io/address/0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+              "source_format": "legacy"
+            }
+          }
+        },
+        "v0.2.0": {
+          "contracts": {
+            "Token": {
+              "address": "0x2234567890123456789012345678901234567890",
+              "block": 27391083,
+              "timestamp": 1681228800,
+              "abi": [
+                {
+                  "type": "event",
+                  "name": "Transfer",
+                  "inputs": [
+                    {"name": "from", "type": "address", "indexed": true},
+                    {"name": "to", "type": "address", "indexed": true},
+                    {"name": "value", "type": "uint256", "indexed": false}
+                  ]
+                }
+              ],
+              "url": "https://gnosisscan.io/address/0x2234567890123456789012345678901234567890",
+              "transaction_hash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              "source_format": "hardhat-deploy",
+              "bytecode": "0x60806040523480156100",
+              "deployed_bytecode": "0x608060405234801561001057600080fd5b50",
+              "constructor_args": ["0x0000000000000000000000000000000000000000"],
+              "solc_input_hash": "abc123def456",
+              "num_deployments": 2
+            },
+            "StakeRegistry": {
+              "address": "0xbbcdefabcdefabcdefabcdefabcdefabcdefabcd",
+              "block": 27391088,
+              "timestamp": 1681228805,
+              "abi": [
+                {
+                  "type": "event",
+                  "name": "StakeUpdated",
+                  "inputs": [
+                    {"name": "overlay", "type": "bytes32", "indexed": true},
+                    {"name": "stakeAmount", "type": "uint256", "indexed": false}
+                  ]
+                },
+                {
+                  "type": "event",
+                  "name": "StakeSlashed",
+                  "inputs": [
+                    {"name": "overlay", "type": "bytes32", "indexed": true},
+                    {"name": "amount", "type": "uint256", "indexed": false}
+                  ]
+                }
+              ],
+              "url": "https://gnosisscan.io/address/0xbbcdefabcdefabcdefabcdefabcdefabcdefabcd",
+              "transaction_hash": "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901",
+              "source_format": "hardhat-deploy",
+              "bytecode": "0x608060405234801561001057600080fd5b50604051",
+              "deployed_bytecode": "0x608060405234801561001057600080fd5b50600436106100",
+              "constructor_args": [],
+              "solc_input_hash": "def456ghi789",
+              "num_deployments": 1
+            }
+          }
+        }
+      }
+    },
+    "testnet": {
+      "chain_id": 11155111,
+      "chain_name": "Sepolia",
+      "block_explorer_url": "https://sepolia.etherscan.io",
+      "versions": {
+        "v0.2.0": {
+          "contracts": {
+            "Token": {
+              "address": "0x3234567890123456789012345678901234567890",
+              "block": 1234567,
+              "timestamp": 1650000000,
+              "abi": [
+                {
+                  "type": "event",
+                  "name": "Transfer",
+                  "inputs": [
+                    {"name": "from", "type": "address", "indexed": true},
+                    {"name": "to", "type": "address", "indexed": true},
+                    {"name": "value", "type": "uint256", "indexed": false}
+                  ]
+                }
+              ],
+              "url": "https://sepolia.etherscan.io/address/0x3234567890123456789012345678901234567890",
+              "transaction_hash": "0xdef1234567890abcdef1234567890abcdef1234567890abcdef123456789012",
+              "source_format": "hardhat-deploy",
+              "bytecode": "0x60806040",
+              "deployed_bytecode": "0x6080604052",
+              "constructor_args": [],
+              "solc_input_hash": "testnet123",
+              "num_deployments": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
