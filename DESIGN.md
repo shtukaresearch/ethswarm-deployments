@@ -115,11 +115,11 @@ Two cache files stored in `~/.swarm-deployments/`:
 | `url` | string | Yes | Computed | Block explorer URL for contract |
 | `transaction_hash` | string | No | Hardhat | Deployment transaction hash |
 | `source_format` | string | Yes | Metadata | "legacy" or "hardhat-deploy" |
-| `bytecode` | string | No | Both | Contract creation bytecode |
-| `deployed_bytecode` | string | No | Hardhat | Deployed runtime bytecode |
-| `constructor_args` | array | No | Hardhat | Constructor arguments |
-| `solc_input_hash` | string | No | Hardhat | Solidity compiler input hash |
-| `num_deployments` | number | No | Hardhat | Deployment count from hardhat-deploy |
+| `bytecode` | string | No | Both | **Creation bytecode**: Complete code sent during deployment, includes constructor + initialization + runtime code. Larger than deployed_bytecode. |
+| `deployed_bytecode` | string | No | Hardhat | **Runtime bytecode**: Code living on blockchain after deployment, excludes constructor. What actually executes when contract is called. May be null in older deployments. |
+| `constructor_args` | array | No | Hardhat | Constructor arguments used during deployment |
+| `solc_input_hash` | string | No | Hardhat | Hash of Solidity compiler input (changes when source code changes) |
+| `num_deployments` | number | No | Hardhat | Local deployment counter tracked by hardhat-deploy. Increments each time this contract name is deployed in this network directory, regardless of whether bytecode changes. Resets if deployment directory is deleted. |
 
 **Field Inclusion Rules:**
 - **Always include**: address, block, timestamp, abi, url, source_format
@@ -800,33 +800,165 @@ regenerate_from_github()
 
 ## Error Handling
 
-### Expected Exceptions
+### Exception Hierarchy
+
+The library raises standard Python exceptions that callers should handle:
 
 ```python
-# FileNotFoundError: Cache not found
+# Custom exceptions (if needed for future extension)
+class DeploymentError(Exception):
+    """Base exception for deployment-related errors"""
+    pass
+
+class CacheNotFoundError(DeploymentError, FileNotFoundError):
+    """Raised when deployment cache file is not found"""
+    pass
+
+class NetworkNotFoundError(DeploymentError, ValueError):
+    """Raised when requested network is not in cache"""
+    pass
+
+class VersionNotFoundError(DeploymentError, ValueError):
+    """Raised when requested version is not found"""
+    pass
+
+class ContractNotFoundError(DeploymentError, ValueError):
+    """Raised when requested contract is not found in version"""
+    pass
+
+class EventNotFoundError(DeploymentError, ValueError):
+    """Raised when requested event is not found in contract ABI"""
+    pass
+```
+
+### Exception Reference
+
+| Exception | Raised By | Condition | Message Format |
+|-----------|-----------|-----------|----------------|
+| `CacheNotFoundError` | `DeploymentManager.__init__()` | Cache file doesn't exist | "Deployment cache not found at {path}. Run regenerate_from_github() to create it." |
+| `NetworkNotFoundError` | `versions()`, `latest_version()`, `network_info()` | Network not found in cache | "Network '{network}' not found in cache" |
+| `VersionNotFoundError` | `latest_version()` | No versions in network | "No versions found for network '{network}'" |
+| `VersionNotFoundError` | `deployment()`, `contract_names()` | Version not found | "Version '{version}' not found in network '{network}'" |
+| `ContractNotFoundError` | `deployment()` | Contract not found | "Contract '{contract}' not found in version '{version}' on network '{network}'" |
+| `EventNotFoundError` | `event_abi()` | Event not found in ABI | "Event '{event}' not found in {contract} {version} ABI" |
+| `ValueError` | `regenerate_from_github()` | Missing RPC URLs | "RPC URL required: set ${ENV_VAR} or pass {param_name} parameter" |
+| `RuntimeError` | `regenerate_from_github()` | Git/network/RPC failures | Specific error message from underlying failure |
+
+**Note**: All custom exceptions inherit from their standard counterparts (e.g., `CacheNotFoundError` inherits from `FileNotFoundError`), so existing code catching standard exceptions will continue to work.
+
+### Usage Examples
+
+**Handling cache not found:**
+```python
+from swarm_deployments import (
+    DeploymentManager,
+    regenerate_from_github,
+    CacheNotFoundError
+)
+
 try:
     mgr = DeploymentManager()
-except FileNotFoundError:
-    print("Cache not found. Run regenerate_from_github() first.")
+except CacheNotFoundError as e:
+    # Cache doesn't exist, regenerate it
+    regenerate_from_github()
+    mgr = DeploymentManager()
 
-# ValueError: Invalid version
+# Also works with standard FileNotFoundError for backward compatibility
+try:
+    mgr = DeploymentManager()
+except FileNotFoundError as e:
+    # CacheNotFoundError inherits from FileNotFoundError
+    regenerate_from_github()
+    mgr = DeploymentManager()
+```
+
+**Handling missing contracts:**
+```python
+from swarm_deployments import ContractNotFoundError
+
+# Using custom exception
+try:
+    deployment = mgr.deployment("NewContract", version="v0.9.4")
+except ContractNotFoundError as e:
+    # Contract doesn't exist in this version
+    logging.warning(f"Contract not found: {e}")
+    deployment = None
+
+# Or using standard ValueError (also works due to inheritance)
+try:
+    deployment = mgr.deployment("NewContract", version="v0.9.4")
+except ValueError as e:
+    logging.warning(f"Contract not found: {e}")
+    deployment = None
+
+# Or check first to avoid exception
+if mgr.has_contract("NewContract", "v0.9.4"):
+    deployment = mgr.deployment("NewContract", version="v0.9.4")
+```
+
+**Handling invalid versions:**
+```python
+from swarm_deployments import VersionNotFoundError
+
 try:
     deployment = mgr.deployment("StakeRegistry", version="v999.0.0")
-except ValueError as e:
-    print(f"Error: {e}")
+except VersionNotFoundError as e:
+    # Version doesn't exist
+    available = mgr.versions()
+    latest = mgr.latest_version()
+    print(f"Invalid version. Available: {available}, Latest: {latest}")
+```
 
-# ValueError: Contract not found in version
+**Handling network errors:**
+```python
+from swarm_deployments import NetworkNotFoundError
+
 try:
-    deployment = mgr.deployment("NonExistent", version="v0.4.0")
-except ValueError as e:
-    print(f"Error: {e}")
+    deployment = mgr.deployment("StakeRegistry", network="unknown")
+except NetworkNotFoundError as e:
+    # Network not in cache
+    metadata = mgr.metadata()
+    available_networks = metadata['networks']
+    print(f"Available networks: {available_networks}")
+```
 
-# ValueError: Event not found
+**Handling event lookup failures:**
+```python
+from swarm_deployments import EventNotFoundError
+
 try:
     event_abi = mgr.event_abi("StakeRegistry", "NonExistentEvent")
-except ValueError as e:
-    print(f"Error: {e}")
+except EventNotFoundError as e:
+    # Event not in contract ABI
+    logging.error(f"Event not found: {e}")
+    event_abi = None
 ```
+
+**Handling regeneration failures:**
+```python
+import os
+
+try:
+    os.environ["GNO_RPC_URL"] = "https://rpc.gnosischain.com"
+    os.environ["SEP_RPC_URL"] = "https://sepolia.gateway.tenderly.co"
+    regenerate_from_github()
+except ValueError as e:
+    # Missing RPC configuration
+    print(f"Configuration error: {e}")
+except RuntimeError as e:
+    # Network, git, or RPC failure
+    print(f"Regeneration failed: {e}")
+```
+
+### Best Practices
+
+1. **Use custom exceptions for specific error handling**: Catch `CacheNotFoundError`, `ContractNotFoundError`, etc. when you need to handle specific cases differently
+2. **Use base exceptions for broad error handling**: Catch `FileNotFoundError` or `ValueError` when you want to handle all related errors uniformly (works due to inheritance)
+3. **Always handle `CacheNotFoundError`** when initializing `DeploymentManager` in production code
+4. **Use `has_contract()`** before calling `deployment()` to avoid exceptions in known uncertain cases
+5. **Let exceptions propagate** in library code unless you have specific recovery logic
+6. **Log exceptions** at appropriate levels (ERROR for failures, WARNING for missing optional data)
+7. **Import only the exceptions you use**: Keeps code clean and signals intent to readers
 
 ---
 
@@ -954,3 +1086,5 @@ Expected coverage (as of 2025-12-21):
 |---------|------|---------|
 | 1.0 | 2025-12-21 | Initial design document |
 | 1.1 | 2025-12-21 | Updated testnet from Chiado to Sepolia (chain ID 11155111), added EIP-3770 chain codes, added path configuration methods, added JSON key format rationale, removed migration section |
+| 1.2 | 2025-12-21 | Enhanced field descriptions for bytecode/deployed_bytecode/num_deployments, rewrote error handling for library usage with proper exception hierarchy and handling examples |
+| 1.3 | 2025-12-21 | Updated exception reference table and usage examples to use custom exception types, added note about backward compatibility through inheritance, updated __init__.py to export custom exceptions |
