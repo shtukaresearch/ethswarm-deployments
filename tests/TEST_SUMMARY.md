@@ -51,6 +51,9 @@ tests/
 - ✓ Tests when no stable versions exist
 - ✓ Tests complex version numbers
 - ✓ Tests order preservation
+- ✓ Tests -rc substring matching anywhere in tag (not just suffix)
+- ✓ Tests that only '-rc' substring is matched (not just 'rc' characters)
+- ✓ Tests case-insensitive -rc matching in any position
 
 ### 3. Format Detection (`test_format_detection.py`)
 - ✓ Tests DeploymentFormat enum values

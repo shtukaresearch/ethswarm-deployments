@@ -93,3 +93,40 @@ class TestFilterStableTags:
         expected = ["v0.5.0", "v0.1.0", "v0.3.0", "v0.2.0"]
         result = filter_stable_tags(tags)
         assert result == expected
+
+    def test_rc_substring_matching(self):
+        """Test that -rc is matched as substring anywhere in tag (per spec: 'do not contain')."""
+        tags = [
+            "v1.0.0",           # No -rc → include
+            "v1.0.0-rc",        # -rc at end → exclude
+            "v1.0.0-rc1",       # -rc in middle → exclude
+            "v1.0.0-rc-hotfix", # -rc not at end → exclude (substring match)
+            "v1.0.0-hotfix",    # No -rc → include
+        ]
+        expected = ["v1.0.0", "v1.0.0-hotfix"]
+        result = filter_stable_tags(tags)
+        assert result == expected
+
+    def test_rc_substring_not_suffix_of_rc(self):
+        """Test that 'rc' without dash is not matched (spec requires '-rc')."""
+        tags = [
+            "v1.0.0-src",       # ends with 'rc' but not '-rc' → include
+            "v1.0.0-archive",   # contains 'rc' but not '-rc' → include
+            "v1.0.0-mercury",   # contains 'rc' but not '-rc' → include
+            "v1.0.0-rc",        # actual '-rc' → exclude
+        ]
+        expected = ["v1.0.0-src", "v1.0.0-archive", "v1.0.0-mercury"]
+        result = filter_stable_tags(tags)
+        assert result == expected
+
+    def test_rc_substring_case_insensitive_anywhere(self):
+        """Test case-insensitive -rc matching as substring."""
+        tags = [
+            "v1.0.0-RC-final",  # -RC in middle (uppercase) → exclude
+            "v1.0.0-hotfix-rc", # -rc at end (lowercase) → exclude
+            "v1.0.0-Rc-patch",  # -Rc in middle (mixed case) → exclude
+            "v1.0.0-final",     # No -rc → include
+        ]
+        expected = ["v1.0.0-final"]
+        result = filter_stable_tags(tags)
+        assert result == expected
