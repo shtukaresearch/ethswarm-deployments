@@ -558,7 +558,11 @@ def get_block_timestamp(
 from enum import Enum
 
 class DeploymentFormat(Enum):
-    """Deployment file format types"""
+    """
+    Deployment file format types.
+    
+    Value strings define de/serialization law.
+    """
     HARDHAT_DEPLOY = "hardhat-deploy"
     LEGACY = "legacy"
     NONE = "none"
