@@ -101,15 +101,17 @@ tests/
 - ✓ Tests relative custom root converted to absolute
 
 ### 6. Exceptions (`test_exceptions.py`)
-- ✓ Tests DeploymentError base exception
-- ✓ Tests CacheNotFoundError inherits from both DeploymentError and FileNotFoundError
-- ✓ Tests NetworkNotFoundError inherits from DeploymentError and ValueError
-- ✓ Tests VersionNotFoundError inherits from DeploymentError and ValueError
-- ✓ Tests ContractNotFoundError inherits from DeploymentError and ValueError
-- ✓ Tests EventNotFoundError inherits from DeploymentError and ValueError
-- ✓ Tests exceptions catchable as their base types
-- ✓ Tests exception message formats per specification
-- ✓ Tests exception creation with various message types
+- ✓ Tests CacheNotFoundError catchable as FileNotFoundError
+- ✓ Tests CacheNotFoundError catchable as DeploymentError
+- ✓ Tests NetworkNotFoundError catchable as ValueError
+- ✓ Tests VersionNotFoundError catchable as ValueError
+- ✓ Tests ContractNotFoundError catchable as ValueError
+- ✓ Tests EventNotFoundError catchable as ValueError
+- ✓ Tests all custom exceptions catchable as DeploymentError
+- ✓ Tests all exceptions accept string messages
+- ✓ Tests all exceptions accept empty messages
+
+**Note**: Exception inheritance hierarchy is validated by catching behavior tests. Exception message formats are not tested as messages are for human debugging, not part of the API contract.
 
 
 ## Integration Tests (3 test modules, ~60 test cases)
