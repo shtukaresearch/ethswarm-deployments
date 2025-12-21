@@ -49,13 +49,14 @@ tests/
 - ✓ Tests case-insensitive -rc matching in any position
 
 ### 2. Format Detection (`test_format_detection.py`)
-- ✓ Tests DeploymentFormat enum values
 - ✓ Tests detection of hardhat-deploy format (deployments/network/*.json)
 - ✓ Tests detection of legacy format (network_deployed.json)
 - ✓ Tests return of NONE when no deployment files exist
 - ✓ Tests hardhat-deploy priority over legacy
 - ✓ Tests both mainnet and testnet detection
 - ✓ Tests handling of empty directories and non-.json files
+
+**Note**: The `DeploymentFormat` enum values are not tested at unit level, as they are validated by parser tests (which check `source_format` strings) and integration tests (which verify the cache JSON contains correct values).
 
 ### 3. Parsers (`test_parsers.py`)
 - ✓ Tests parse_hardhat_deployment() with complete fields

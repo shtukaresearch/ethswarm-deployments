@@ -114,7 +114,7 @@ Two cache files stored in `~/.swarm-deployments/`:
 | `abi` | array | Yes | Both | Full contract ABI |
 | `url` | string | Yes | Computed | Block explorer URL for contract |
 | `transaction_hash` | string | No | Hardhat | Deployment transaction hash |
-| `source_format` | string | Yes | Metadata | "legacy" or "hardhat-deploy" |
+| `source_format` | string | Yes | Metadata | **Source format preference**: `"hardhat-deploy"` if this deployment data was sourced from `deployments/{network}/*.json`, `"legacy"` if sourced from `{network}_deployed.json`. Indicates the "most preferred" or richest source of deployment information for this contract version. When both formats are available (v0.6.0+), hardhat-deploy is preferred as it contains more metadata (transaction_hash, deployed_bytecode, constructor_args, etc.). |
 | `bytecode` | string | No | Both | **Creation bytecode**: Complete code sent during deployment, includes constructor + initialization + runtime code. Larger than deployed_bytecode. |
 | `deployed_bytecode` | string | No | Hardhat | **Runtime bytecode**: Code living on blockchain after deployment, excludes constructor. What actually executes when contract is called. May be null in older deployments. |
 | `constructor_args` | array | No | Hardhat | Constructor arguments used during deployment |

@@ -7,16 +7,6 @@ import pytest
 from swarm_deployments.parsers import DeploymentFormat, detect_deployment_format
 
 
-class TestDeploymentFormat:
-    """Test the DeploymentFormat enum."""
-
-    def test_enum_values(self):
-        """Test that DeploymentFormat has expected values."""
-        assert DeploymentFormat.HARDHAT_DEPLOY.value == "hardhat-deploy"
-        assert DeploymentFormat.LEGACY.value == "legacy"
-        assert DeploymentFormat.NONE.value == "none"
-
-
 class TestDetectDeploymentFormat:
     """Test the detect_deployment_format function."""
 
