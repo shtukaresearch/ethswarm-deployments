@@ -405,8 +405,40 @@ def filter_stable_tags(tags: List[str]) -> List[str]:
 
 ### Contract Name Mapping
 
+The library supports two naming conventions for contracts:
+
+1. **Canonical names** (from hardhat-deploy): `Token`, `StakeRegistry`, `PostageStamp`, `PriceOracle`, `Redistribution`
+   - Source: JSON filenames in `deployments/mainnet/*.json` (e.g., `StakeRegistry.json`)
+   - Specified in `deploy()` calls in deployment scripts
+
+2. **Legacy names** (from Swarm's custom format): `bzzToken`, `staking`, `postageStamp`, `priceOracle`, `redistribution`
+   - Source: Object keys in `mainnet_deployed.json` under `contracts`
+   - Manually curated for the Swarm node API
+
+**Rationale for Hardcoded Mapping**:
+
+The correspondence between legacy and canonical names must be maintained as a **hardcoded constant** because:
+
+1. **Names are manually curated**: Legacy names were hand-picked for the Swarm node API and don't follow a consistent derivation rule:
+   - `bzzToken` is manually chosen (not `testToken` from the deploy tag)
+   - `priceOracle` uses the full name (not `oracle` from the deploy tag)
+   - Other names happen to match their deploy tags (`staking`, `postageStamp`, `redistribution`)
+
+2. **No algorithmic relationship**: The mapping cannot be derived from:
+   - Contract addresses (addresses change across versions)
+   - Source filenames (`TestToken.sol` → `Token` vs `bzzToken`)
+   - Deployment script tags (`oracle` → `PriceOracle` vs `priceOracle`)
+   - Any naming convention or transformation rule
+
+3. **Stable across versions**: Analysis of tags v0.4.0 through v0.9.2 confirms:
+   - Legacy names are identical across all versions
+   - Canonical names are identical across all versions (since v0.6.0)
+   - The 1:1 correspondence is consistent and stable
+
+**Implementation**:
+
 ```python
-# Bidirectional mapping for backward compatibility
+# Hardcoded bidirectional mapping for backward compatibility
 LEGACY_TO_CANONICAL = {
     "bzzToken": "Token",
     "staking": "StakeRegistry",
@@ -426,8 +458,15 @@ def normalize_contract_name(name: str) -> str:
 
     Returns:
         Canonical contract name
+
+    Implementation notes:
+    - Returns canonical names unchanged
+    - Converts legacy names to canonical using LEGACY_TO_CANONICAL
+    - Unknown names may return unchanged or raise ValueError (implementation choice)
     """
 ```
+
+**Note**: Only these two naming conventions appear in deployment JSON files. Hardhat deployment tags and Solidity source filenames are internal to the storage-incentives repository and are not exposed by this library.
 
 ---
 

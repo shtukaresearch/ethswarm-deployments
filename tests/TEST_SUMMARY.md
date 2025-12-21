@@ -32,18 +32,11 @@ tests/
     └── test_backward_compatibility.py          # Legacy name support tests
 ```
 
-## Unit Tests (9 test modules, ~150 test cases)
+## Unit Tests (6 test modules)
 
-### 1. Contract Name Normalization (`test_contract_name_normalization.py`)
-- ✓ Tests LEGACY_TO_CANONICAL mapping dictionary
-- ✓ Tests CANONICAL_TO_LEGACY mapping dictionary
-- ✓ Tests bidirectional mapping consistency
-- ✓ Tests normalize_contract_name() with canonical names (unchanged)
-- ✓ Tests conversion from legacy to canonical names
-- ✓ Tests handling of unknown contract names
-- ✓ Tests edge cases (empty strings, etc.)
+**Note**: Contract name normalization is tested only at the integration level in `test_backward_compatibility.py`, as the mapping is a fixed constant with no algorithmic logic to unit test.
 
-### 2. Version Filtering (`test_version_filtering.py`)
+### 1. Version Filtering (`test_version_filtering.py`)
 - ✓ Tests filter_stable_tags() keeps only v-prefixed tags
 - ✓ Tests removal of -rc versions (case-insensitive)
 - ✓ Tests filtering of non-version tags (branches, etc.)
@@ -55,7 +48,7 @@ tests/
 - ✓ Tests that only '-rc' substring is matched (not just 'rc' characters)
 - ✓ Tests case-insensitive -rc matching in any position
 
-### 3. Format Detection (`test_format_detection.py`)
+### 2. Format Detection (`test_format_detection.py`)
 - ✓ Tests DeploymentFormat enum values
 - ✓ Tests detection of hardhat-deploy format (deployments/network/*.json)
 - ✓ Tests detection of legacy format (network_deployed.json)
@@ -64,7 +57,7 @@ tests/
 - ✓ Tests both mainnet and testnet detection
 - ✓ Tests handling of empty directories and non-.json files
 
-### 4. Parsers (`test_parsers.py`)
+### 3. Parsers (`test_parsers.py`)
 - ✓ Tests parse_hardhat_deployment() with complete fields
 - ✓ Tests field mapping (hardhat names → canonical names)
 - ✓ Tests parsing with minimal required fields only
@@ -77,7 +70,7 @@ tests/
 - ✓ Tests inclusion of optional fields (bytecode, url)
 - ✓ Tests all legacy contract names
 
-### 5. Timestamp Cache (`test_timestamp_cache.py`)
+### 4. Timestamp Cache (`test_timestamp_cache.py`)
 - ✓ Tests load_timestamp_cache() with existing file
 - ✓ Tests loading from non-existent file (returns empty)
 - ✓ Tests handling of empty/corrupted JSON
@@ -93,7 +86,7 @@ tests/
 - ✓ Tests network error handling
 - ✓ Tests block numbers stored as strings (JSON requirement)
 
-### 6. Path Helpers (`test_path_helpers.py`)
+### 5. Path Helpers (`test_path_helpers.py`)
 - ✓ Tests get_default_cache_dir() returns ~/.swarm-deployments
 - ✓ Tests returned path is absolute
 - ✓ Tests consistency across calls
@@ -106,7 +99,7 @@ tests/
 - ✓ Tests paths are absolute
 - ✓ Tests relative custom root converted to absolute
 
-### 7. Exceptions (`test_exceptions.py`)
+### 6. Exceptions (`test_exceptions.py`)
 - ✓ Tests DeploymentError base exception
 - ✓ Tests CacheNotFoundError inherits from both DeploymentError and FileNotFoundError
 - ✓ Tests NetworkNotFoundError inherits from DeploymentError and ValueError
@@ -117,8 +110,6 @@ tests/
 - ✓ Tests exception message formats per specification
 - ✓ Tests exception creation with various message types
 
-### 8-9. Other Unit Tests
-All unit tests follow the specification in DESIGN.md and test edge cases, error conditions, and expected behavior.
 
 ## Integration Tests (3 test modules, ~60 test cases)
 
