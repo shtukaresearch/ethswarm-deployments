@@ -569,7 +569,12 @@ class DeploymentFormat(Enum):
 
 def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
     """
-    Detect which deployment format is available in a git tag checkout
+    Detect which deployment format is available in a git tag checkout.
+    
+    Assumption: any files
+    * with json extension found in child directories of ./deployments, or
+    * matching the pattern /{network}_deployed.json in repo root 
+    are deployment files.
 
     Args:
         tag_dir: Root directory of checked-out tag
@@ -577,13 +582,8 @@ def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
 
     Returns:
         DeploymentFormat.HARDHAT_DEPLOY if deployments/{network}/*.json files exist
-        DeploymentFormat.LEGACY if {network}_deployed.json file exists
+        DeploymentFormat.LEGACY if HARDHAT_DEPLOY check fails but {network}_deployed.json file exists
         DeploymentFormat.NONE if no deployment files found
-
-    Implementation notes:
-    - Check for hardhat-deploy format first: deployments/{network}/ directory with .json files
-    - Fall back to legacy format: {network}_deployed.json file in root
-    - Return DeploymentFormat.NONE if neither format found
     """
 ```
 
