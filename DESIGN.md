@@ -458,20 +458,30 @@ def normalize_contract_name(name: str) -> str:
 **Loading:**
 ```python
 def load_timestamp_cache(cache_path: Path) -> Dict[str, Dict[str, int]]:
-    """Load existing timestamp cache or return empty dict"""
-    if cache_path.exists():
-        with open(cache_path) as f:
-            return json.load(f)
-    return {"mainnet": {}, "testnet": {}}
+    """
+    Load existing timestamp cache or return empty dict
+
+    Args:
+        cache_path: Path to block_timestamps.json file
+
+    Returns:
+        Dictionary mapping network -> block_number_str -> timestamp
+        Empty structure if file doesn't exist
+    """
 ```
 
 **Saving:**
 ```python
 def save_timestamp_cache(cache: Dict[str, Dict[str, int]], cache_path: Path):
-    """Save updated timestamp cache"""
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(cache_path, 'w') as f:
-        json.dump(cache, f, indent=2)
+    """
+    Save updated timestamp cache to disk
+
+    Args:
+        cache: Timestamp cache dictionary
+        cache_path: Path to block_timestamps.json file
+
+    Creates parent directories if they don't exist
+    """
 ```
 
 **Fetching:**
@@ -482,54 +492,56 @@ def get_block_timestamp(
     rpc_url: str,
     cache: Dict[str, Dict[str, int]]
 ) -> int:
-    """Get block timestamp, using cache or fetching via RPC"""
-    block_str = str(block_number)
+    """
+    Get block timestamp, using cache or fetching via RPC
 
-    # Check cache first
-    if block_str in cache.get(network, {}):
-        return cache[network][block_str]
+    Args:
+        block_number: Block number to get timestamp for
+        network: Network name ("mainnet" or "testnet")
+        rpc_url: RPC endpoint URL
+        cache: Timestamp cache (will be updated if RPC call is made)
 
-    # Fetch via RPC
-    response = requests.post(
-        rpc_url,
-        json={
-            "jsonrpc": "2.0",
-            "method": "eth_getBlockByNumber",
-            "params": [hex(block_number), False],
-            "id": 1,
-        },
-        timeout=30,
-    )
-    response.raise_for_status()
-    block_data = response.json().get("result", {})
-    timestamp = int(block_data.get("timestamp", "0x0"), 16)
+    Returns:
+        Unix timestamp of the block
 
-    # Update cache
-    if network not in cache:
-        cache[network] = {}
-    cache[network][block_str] = timestamp
-
-    return timestamp
+    Implementation notes:
+    - Check cache first (network -> str(block_number) lookup)
+    - If not cached, make RPC call via eth_getBlockByNumber
+    - Parse hex timestamp from response
+    - Update cache with new value
+    - Return timestamp
+    """
 ```
 
 ### Format Detection
 
 ```python
-def detect_deployment_format(tag_dir: Path, network: str) -> str:
-    """
-    Detect which deployment format is available
+from enum import Enum
 
-    Returns: "hardhat-deploy", "legacy", or "none"
-    """
-    hardhat_dir = tag_dir / "deployments" / network
-    legacy_file = tag_dir / f"{network}_deployed.json"
+class DeploymentFormat(Enum):
+    """Deployment file format types"""
+    HARDHAT_DEPLOY = "hardhat-deploy"
+    LEGACY = "legacy"
+    NONE = "none"
 
-    if hardhat_dir.exists() and any(hardhat_dir.glob("*.json")):
-        return "hardhat-deploy"
-    elif legacy_file.exists():
-        return "legacy"
-    else:
-        return "none"
+def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
+    """
+    Detect which deployment format is available in a git tag checkout
+
+    Args:
+        tag_dir: Root directory of checked-out tag
+        network: Network name ("mainnet" or "testnet")
+
+    Returns:
+        DeploymentFormat.HARDHAT_DEPLOY if deployments/{network}/*.json files exist
+        DeploymentFormat.LEGACY if {network}_deployed.json file exists
+        DeploymentFormat.NONE if no deployment files found
+
+    Implementation notes:
+    - Check for hardhat-deploy format first: deployments/{network}/ directory with .json files
+    - Fall back to legacy format: {network}_deployed.json file in root
+    - Return DeploymentFormat.NONE if neither format found
+    """
 ```
 
 ### Hardhat-Deploy Parser
@@ -539,33 +551,22 @@ def parse_hardhat_deployment(file_path: Path) -> Dict[str, Any]:
     """
     Parse a hardhat-deploy JSON file
 
-    Returns dict with canonical field names
+    Args:
+        file_path: Path to contract deployment JSON file
+
+    Returns:
+        Dictionary with canonical field names:
+        - Required: address, block, abi, source_format
+        - Optional: transaction_hash, bytecode, deployed_bytecode,
+          constructor_args, solc_input_hash, num_deployments
+
+    Implementation notes:
+    - Read JSON file
+    - Extract required fields: address, receipt.blockNumber, abi
+    - Set source_format to "hardhat-deploy"
+    - Extract optional fields if present (transactionHash, bytecode, etc.)
+    - Map hardhat field names to canonical names (e.g., args -> constructor_args)
     """
-    with open(file_path) as f:
-        data = json.load(f)
-
-    contract = {
-        "address": data["address"],
-        "block": data["receipt"]["blockNumber"],
-        "abi": data["abi"],
-        "source_format": "hardhat-deploy",
-    }
-
-    # Optional fields
-    if "transactionHash" in data:
-        contract["transaction_hash"] = data["transactionHash"]
-    if "bytecode" in data:
-        contract["bytecode"] = data["bytecode"]
-    if "deployedBytecode" in data:
-        contract["deployed_bytecode"] = data["deployedBytecode"]
-    if "args" in data:
-        contract["constructor_args"] = data["args"]
-    if "solcInputHash" in data:
-        contract["solc_input_hash"] = data["solcInputHash"]
-    if "numDeployments" in data:
-        contract["num_deployments"] = data["numDeployments"]
-
-    return contract
 ```
 
 ### Legacy Parser
@@ -573,35 +574,23 @@ def parse_hardhat_deployment(file_path: Path) -> Dict[str, Any]:
 ```python
 def parse_legacy_deployment(file_path: Path) -> Dict[str, Dict[str, Any]]:
     """
-    Parse legacy deployment JSON
+    Parse legacy deployment JSON format
 
-    Returns dict mapping canonical names to contract data
+    Args:
+        file_path: Path to {network}_deployed.json file
+
+    Returns:
+        Dictionary mapping canonical contract names to contract data
+        Each contract has: address, block, abi, source_format, optional bytecode/url
+
+    Implementation notes:
+    - Read JSON file and extract contracts object
+    - Iterate over contracts (keys are legacy names)
+    - Map legacy names to canonical names using LEGACY_TO_CANONICAL
+    - Extract fields: address, block, abi
+    - Set source_format to "legacy"
+    - Include optional fields if present (bytecode, url)
     """
-    with open(file_path) as f:
-        data = json.load(f)
-
-    contracts = {}
-    for legacy_name, contract_data in data.get("contracts", {}).items():
-        # Convert to canonical name
-        canonical_name = LEGACY_TO_CANONICAL.get(legacy_name, legacy_name)
-
-        contract = {
-            "address": contract_data["address"],
-            "block": contract_data.get("block", 0),
-            "abi": contract_data["abi"],
-            "source_format": "legacy",
-        }
-
-        # Optional fields
-        if "bytecode" in contract_data:
-            contract["bytecode"] = contract_data["bytecode"]
-        if "url" in contract_data:
-            # Keep legacy URL if present, will be overwritten later
-            contract["url"] = contract_data["url"]
-
-        contracts[canonical_name] = contract
-
-    return contracts
 ```
 
 ---
@@ -631,8 +620,12 @@ from pathlib import Path
 from typing import Optional
 
 def get_default_cache_dir() -> Path:
-    """Get default cache directory (user home)"""
-    return Path.home() / ".swarm-deployments"
+    """
+    Get default cache directory (user home)
+
+    Returns:
+        Path to ~/.swarm-deployments
+    """
 
 def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
     """
@@ -643,14 +636,11 @@ def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
 
     Returns:
         Tuple of (deployments_path, timestamps_path)
-    """
-    if cache_root is None:
-        cache_root = get_default_cache_dir()
 
-    return (
-        cache_root / "deployments.json",
-        cache_root / "block_timestamps.json",
-    )
+    Implementation notes:
+    - If cache_root is None, use get_default_cache_dir()
+    - Return tuple of cache_root/deployments.json and cache_root/block_timestamps.json
+    """
 ```
 
 **Usage patterns**:
@@ -1088,3 +1078,4 @@ Expected coverage (as of 2025-12-21):
 | 1.1 | 2025-12-21 | Updated testnet from Chiado to Sepolia (chain ID 11155111), added EIP-3770 chain codes, added path configuration methods, added JSON key format rationale, removed migration section |
 | 1.2 | 2025-12-21 | Enhanced field descriptions for bytecode/deployed_bytecode/num_deployments, rewrote error handling for library usage with proper exception hierarchy and handling examples |
 | 1.3 | 2025-12-21 | Updated exception reference table and usage examples to use custom exception types, added note about backward compatibility through inheritance, updated __init__.py to export custom exceptions |
+| 1.4 | 2025-12-21 | Removed implementations from code snippets (timestamp cache management, format detection, parsers, path configuration), added DeploymentFormat enum for type-safe format detection, converted all code examples to specification-style with signatures and docstrings only |
