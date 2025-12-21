@@ -1,0 +1,14 @@
+"""
+swarm-deployments: Python library for managing Ethswarm smart contract deployments
+"""
+
+from .deployments import DeploymentManager, regenerate_from_github
+from .types import ContractDeployment
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "DeploymentManager",
+    "regenerate_from_github",
+    "ContractDeployment",
+]
