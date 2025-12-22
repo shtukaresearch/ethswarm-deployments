@@ -730,16 +730,16 @@ class DeploymentFormat(Enum):
 
     Value strings define de/serialization law.
 
-    Notes:
-    - HARDHAT_DEPLOY, LEGACY, BRIDGED: Appear as source_format in cache
-    - NONE: Detection result only (tags without deployment files), never appears in cache
+    All enum values appear as source_format in cache:
+    - HARDHAT_DEPLOY: Contracts deployed via hardhat-deploy
+    - LEGACY: Contracts from legacy deployment format
+    - BRIDGED: Token contract (bridged via Omnibridge, not deployed)
     """
     HARDHAT_DEPLOY = "hardhat-deploy"
     LEGACY = "legacy"
-    BRIDGED = "bridged"  # Token contract (bridged via Omnibridge, not deployed)
-    NONE = "none"  # Detection result only, never in cache
+    BRIDGED = "bridged"
 
-def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
+def detect_deployment_format(tag_dir: Path, network: str) -> Optional[DeploymentFormat]:
     """
     Detect which deployment format is available in a git tag checkout.
 
@@ -755,7 +755,7 @@ def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
     Returns:
         DeploymentFormat.HARDHAT_DEPLOY if deployments/{network}/*.json files exist
         DeploymentFormat.LEGACY if HARDHAT_DEPLOY check fails but {network}_deployed.json file exists
-        DeploymentFormat.NONE if no deployment files found
+        None if no deployment files found
 
     Note:
         DeploymentFormat.BRIDGED is never returned by this function - it's assigned
@@ -1354,3 +1354,4 @@ Expected coverage (as of 2025-12-21):
 | 1.6 | 2025-12-22 | Added parse_deployments_from_repo() function specification to enable testing without RPC dependency through timestamp_lookup callback parameter, maintaining timestamps as required field |
 | 1.7 | 2025-12-22 | Added partial cache support: caches may contain subset of networks based on RPC availability, added has_network() method, updated regenerate_from_github() to require at least one RPC URL and skip networks without RPC, timestamps remain required (int, not Optional) for all cached networks |
 | 1.8 | 2025-12-22 | **Major schema change**: Normalized cache structure with separate `deployments` (keyed by address) and `versions` (address references) to eliminate duplication. Token contract documented as `source_format: "bridged"` (Omnibridge from Ethereum mainnet). Clarified `all_deployments()` returns distinct deployments only with earliest version. Added `DeploymentFormat.BRIDGED` enum value for Token contract, clarified `NONE` is detection-only. Cache size reduced ~40%. |
+| 1.9 | 2025-12-22 | Removed `name` field from deployment objects (redundant, obtained from version manifest). Removed `DeploymentFormat.NONE`, replaced with `Optional[DeploymentFormat]` return type for `detect_deployment_format()`. Enum now only contains values that appear in cache. |
