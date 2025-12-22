@@ -447,8 +447,6 @@ LEGACY_TO_CANONICAL = {
     "redistribution": "Redistribution",
 }
 
-CANONICAL_TO_LEGACY = {v: k for k, v in LEGACY_TO_CANONICAL.items()}
-
 def normalize_contract_name(name: str) -> str:
     """
     Convert contract name to canonical form
