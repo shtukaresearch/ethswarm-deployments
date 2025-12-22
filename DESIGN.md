@@ -701,6 +701,8 @@ mgr = DeploymentManager("/path/to/custom/deployments.json")
 
 ### Network Configuration
 
+Implementation note: hardcoded dict based on data retrieved from https://github.com/ethereum-lists/chains.
+
 ```python
 NETWORK_CONFIG = {
     "mainnet": {
