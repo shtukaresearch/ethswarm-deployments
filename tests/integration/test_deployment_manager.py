@@ -425,3 +425,73 @@ class TestNetworkInfo:
             mgr.network_info("invalid_network")
 
         assert "invalid_network" in str(exc_info.value)
+
+
+class TestPartialCache:
+    """Test behavior with partial caches (missing networks)."""
+
+    def test_has_network_returns_true_for_existing(self, temp_deployments_cache: Path):
+        """Test that has_network() returns True for networks in cache."""
+        mgr = DeploymentManager(str(temp_deployments_cache))
+
+        assert mgr.has_network("mainnet") is True
+        assert mgr.has_network("testnet") is True
+
+    def test_has_network_returns_false_for_missing(self, temp_deployments_cache: Path):
+        """Test that has_network() returns False for networks not in cache."""
+        mgr = DeploymentManager(str(temp_deployments_cache))
+
+        assert mgr.has_network("invalid_network") is False
+        assert mgr.has_network("arbitrum") is False
+
+    def test_partial_cache_mainnet_only(self, tmp_path: Path):
+        """Test DeploymentManager with cache containing only mainnet."""
+        # Create a partial cache with only mainnet
+        partial_cache = {
+            "metadata": {
+                "generated_at": "2025-12-22 10:00:00 UTC",
+                "source_repo": "https://github.com/ethersphere/storage-incentives",
+                "networks": ["mainnet"]
+            },
+            "networks": {
+                "mainnet": {
+                    "chain_id": 100,
+                    "chain_name": "Gnosis Chain",
+                    "block_explorer_url": "https://gnosisscan.io",
+                    "versions": {
+                        "v0.1.0": {
+                            "contracts": {
+                                "Token": {
+                                    "address": "0x1234567890123456789012345678901234567890",
+                                    "block": 25527075,
+                                    "timestamp": 1671456789,
+                                    "abi": [],
+                                    "url": "https://gnosisscan.io/address/0x1234567890123456789012345678901234567890",
+                                    "source_format": "legacy"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        cache_path = tmp_path / "partial_deployments.json"
+        import json
+        with open(cache_path, "w") as f:
+            json.dump(partial_cache, f)
+
+        mgr = DeploymentManager(str(cache_path))
+
+        # Mainnet queries should work
+        assert mgr.has_network("mainnet") is True
+        assert len(mgr.versions("mainnet")) > 0
+
+        # Testnet queries should fail
+        assert mgr.has_network("testnet") is False
+        with pytest.raises(NetworkNotFoundError):
+            mgr.versions("testnet")
+        with pytest.raises(NetworkNotFoundError):
+            mgr.deployment("Token", network="testnet")
+        with pytest.raises(NetworkNotFoundError):
+            mgr.network_info("testnet")

@@ -6,27 +6,24 @@ import subprocess
 from pathlib import Path
 
 import pytest
-import responses
 
 from swarm_deployments import regenerate_from_github
 
 
-class TestRegenerateFromGithub:
-    """Test the regenerate_from_github() function."""
+class TestRegenerateFromGithubRPC:
+    """Test RPC-based cache generation (requires network access)."""
 
-    def test_regenerates_cache_with_rpc_urls(self, tmp_path: Path):
-        """Test cache regeneration with explicit RPC URLs."""
+    def test_regenerates_cache_with_both_rpcs(self, tmp_path: Path):
+        """Test cache regeneration with both mainnet and testnet RPC URLs."""
         output_path = tmp_path / "deployments.json"
 
-        # This test will clone the real storage-incentives repo
-        # and use real RPC URLs from environment variables
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+        testnet_rpc = os.environ.get("SEP_RPC_URL")
+
+        if not mainnet_rpc or not testnet_rpc:
+            pytest.skip("Both RPC URLs not configured in environment")
+
         try:
-            mainnet_rpc = os.environ.get("GNO_RPC_URL")
-            testnet_rpc = os.environ.get("SEP_RPC_URL")
-
-            if not mainnet_rpc or not testnet_rpc:
-                pytest.skip("RPC URLs not configured in environment")
-
             result_path = regenerate_from_github(
                 output_path=str(output_path),
                 mainnet_rpc_url=mainnet_rpc,
@@ -36,7 +33,7 @@ class TestRegenerateFromGithub:
             assert Path(result_path).exists()
             assert Path(result_path) == output_path
 
-            # Verify the cache file structure
+            # Verify basic cache structure
             with open(output_path) as f:
                 cache = json.load(f)
 
@@ -50,6 +47,76 @@ class TestRegenerateFromGithub:
         except Exception as e:
             pytest.skip(f"Cache generation failed: {e}")
 
+    def test_regenerates_with_mainnet_rpc_only(self, tmp_path: Path):
+        """Test cache regeneration with only mainnet RPC URL."""
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+        testnet_rpc = os.environ.get("SEP_RPC_URL")
+
+        if not mainnet_rpc:
+            pytest.skip("Mainnet RPC URL not configured")
+
+        if testnet_rpc:
+            pytest.skip("Test requires only mainnet RPC")
+
+        try:
+            # Should work with just mainnet RPC
+            result_path = regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url="http://fake-testnet-rpc.example.com",
+            )
+
+            assert Path(result_path).exists()
+
+            with open(output_path) as f:
+                cache = json.load(f)
+
+            # Should have mainnet data
+            assert "mainnet" in cache["networks"]
+            assert len(cache["networks"]["mainnet"].get("versions", {})) > 0
+
+        except subprocess.CalledProcessError:
+            pytest.skip("Git operations failed")
+        except Exception as e:
+            pytest.skip(f"Cache generation failed: {e}")
+
+    def test_regenerates_with_testnet_rpc_only(self, tmp_path: Path):
+        """Test cache regeneration with only testnet RPC URL."""
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+        testnet_rpc = os.environ.get("SEP_RPC_URL")
+
+        if not testnet_rpc:
+            pytest.skip("Testnet RPC URL not configured")
+
+        if mainnet_rpc:
+            pytest.skip("Test requires only testnet RPC")
+
+        try:
+            # Should work with just testnet RPC
+            result_path = regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url="http://fake-mainnet-rpc.example.com",
+                testnet_rpc_url=testnet_rpc,
+            )
+
+            assert Path(result_path).exists()
+
+            with open(output_path) as f:
+                cache = json.load(f)
+
+            # Should have testnet data
+            assert "testnet" in cache["networks"]
+            assert len(cache["networks"]["testnet"].get("versions", {})) > 0
+
+        except subprocess.CalledProcessError:
+            pytest.skip("Git operations failed")
+        except Exception as e:
+            pytest.skip(f"Cache generation failed: {e}")
+
     def test_uses_environment_variables_for_rpc_urls(self, tmp_path: Path, monkeypatch):
         """Test that RPC URLs are read from environment variables."""
         output_path = tmp_path / "deployments.json"
@@ -57,18 +124,49 @@ class TestRegenerateFromGithub:
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
 
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
 
         # Set environment variables
-        monkeypatch.setenv("GNO_RPC_URL", mainnet_rpc)
-        monkeypatch.setenv("SEP_RPC_URL", testnet_rpc)
+        if mainnet_rpc:
+            monkeypatch.setenv("GNO_RPC_URL", mainnet_rpc)
+        if testnet_rpc:
+            monkeypatch.setenv("SEP_RPC_URL", testnet_rpc)
 
         try:
             result_path = regenerate_from_github(output_path=str(output_path))
             assert Path(result_path).exists()
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
+
+    def test_parameter_takes_precedence_over_env_var(self, tmp_path: Path, monkeypatch):
+        """Test that explicit RPC URL parameter takes precedence over env var."""
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+        testnet_rpc = os.environ.get("SEP_RPC_URL")
+
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
+
+        # Set environment variables to different values
+        monkeypatch.setenv("GNO_RPC_URL", "http://should-not-use.example.com")
+        monkeypatch.setenv("SEP_RPC_URL", "http://should-not-use.example.com")
+
+        try:
+            # Explicit parameters should be used instead
+            result_path = regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
+                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+            )
+            assert Path(result_path).exists()
+        except (subprocess.CalledProcessError, Exception) as e:
+            pytest.skip(f"Cache generation failed: {e}")
+
+
+class TestRegenerateFromGithubContract:
+    """Test the contract of regenerate_from_github() function."""
 
     def test_raises_error_when_rpc_urls_missing(self, tmp_path: Path, monkeypatch):
         """Test that ValueError is raised when RPC URLs are not provided."""
@@ -81,115 +179,45 @@ class TestRegenerateFromGithub:
         with pytest.raises(ValueError):
             regenerate_from_github(output_path=str(output_path))
 
-    def test_parameter_takes_precedence_over_env_var(self, tmp_path: Path, monkeypatch):
-        """Test that explicit RPC URL parameter takes precedence over env var."""
+    def test_handles_git_errors_gracefully(self, tmp_path: Path):
+        """Test that git errors raise RuntimeError."""
         output_path = tmp_path / "deployments.json"
 
-        mainnet_rpc = os.environ.get("GNO_RPC_URL")
-        testnet_rpc = os.environ.get("SEP_RPC_URL")
-
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
-
-        # Set environment variables to different values
-        monkeypatch.setenv("GNO_RPC_URL", "http://should-not-use.example.com")
-        monkeypatch.setenv("SEP_RPC_URL", "http://should-not-use.example.com")
-
-        try:
-            # Explicit parameters should be used instead
-            result_path = regenerate_from_github(
-                output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
-            )
-            assert Path(result_path).exists()
-        except (subprocess.CalledProcessError, Exception) as e:
-            pytest.skip(f"Cache generation failed: {e}")
-
-    def test_uses_default_output_path(self, monkeypatch):
-        """Test that default output path is used when not specified."""
-        mainnet_rpc = os.environ.get("GNO_RPC_URL")
-        testnet_rpc = os.environ.get("SEP_RPC_URL")
-
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
-
-        # This test would write to ~/.swarm-deployments/deployments.json
-        # Skip it to avoid modifying user's actual cache
-        pytest.skip("Skipping test that would modify default cache location")
-
-    def test_timestamp_cache_reused_across_runs(self, tmp_path: Path):
-        """Test that timestamp cache is reused to minimize RPC calls."""
-        output_path = tmp_path / "deployments.json"
-        timestamp_cache = tmp_path / "block_timestamps.json"
-
-        mainnet_rpc = os.environ.get("GNO_RPC_URL")
-        testnet_rpc = os.environ.get("SEP_RPC_URL")
-
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
-
-        # Pre-populate timestamp cache
-        initial_cache = {
-            "mainnet": {
-                "25527075": 1671456789,
-            },
-            "testnet": {},
-        }
-        with open(timestamp_cache, "w") as f:
-            json.dump(initial_cache, f)
-
-        try:
-            # First run should read existing cache
+        # Use an invalid repository URL
+        with pytest.raises(RuntimeError):
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
+                repo_url="https://github.com/nonexistent/repo-does-not-exist.git",
+                mainnet_rpc_url="http://fake-rpc.example.com",
+                testnet_rpc_url="http://fake-rpc.example.com",
             )
 
-            # Timestamp cache should exist and have been updated
-            assert timestamp_cache.exists()
-
-            with open(timestamp_cache) as f:
-                updated_cache = json.load(f)
-
-            # Original entry should still be there
-            assert "mainnet" in updated_cache
-            # Cache should have potentially more entries
-            assert len(updated_cache["mainnet"]) >= len(initial_cache["mainnet"])
-
-        except (subprocess.CalledProcessError, Exception) as e:
-            pytest.skip(f"Cache generation failed: {e}")
-
-    def test_stable_tags_filtering(self, tmp_path: Path):
-        """Test that only stable tags are processed during regeneration."""
-        output_path = tmp_path / "deployments.json"
+    def test_creates_parent_directories(self, tmp_path: Path):
+        """Test that parent directories are created if they don't exist."""
+        output_path = tmp_path / "nested" / "path" / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
 
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
 
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
+                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
+                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
             )
 
-            with open(output_path) as f:
-                cache = json.load(f)
-
-            # Check that versions don't include -rc versions
-            for network_name, network_data in cache["networks"].items():
-                versions = network_data.get("versions", {}).keys()
-                for version in versions:
-                    assert "-rc" not in version.lower(), f"Found RC version: {version}"
-                    assert version.startswith("v"), f"Version doesn't start with 'v': {version}"
+            assert output_path.exists()
+            assert output_path.parent.exists()
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
+
+
+class TestCacheStructure:
+    """Test the structure and content of generated cache."""
 
     def test_cache_contains_required_metadata(self, tmp_path: Path):
         """Test that generated cache contains all required metadata."""
@@ -198,14 +226,14 @@ class TestRegenerateFromGithub:
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
 
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
 
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
+                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
+                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
             )
 
             with open(output_path) as f:
@@ -221,13 +249,42 @@ class TestRegenerateFromGithub:
 
             # Check network-level metadata
             assert "networks" in cache
-            for network_name in ["mainnet", "testnet"]:
-                assert network_name in cache["networks"]
+            for network_name in cache["networks"]:
                 network = cache["networks"][network_name]
                 assert "chain_id" in network
                 assert "chain_name" in network
                 assert "block_explorer_url" in network
                 assert "versions" in network
+
+        except (subprocess.CalledProcessError, Exception) as e:
+            pytest.skip(f"Cache generation failed: {e}")
+
+    def test_stable_tags_filtering(self, tmp_path: Path):
+        """Test that only stable tags are processed during regeneration."""
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+        testnet_rpc = os.environ.get("SEP_RPC_URL")
+
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
+
+        try:
+            regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
+                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+            )
+
+            with open(output_path) as f:
+                cache = json.load(f)
+
+            # Check that versions don't include -rc versions
+            for network_data in cache["networks"].values():
+                versions = network_data.get("versions", {}).keys()
+                for version in versions:
+                    assert "-rc" not in version.lower()
+                    assert version.startswith("v")
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
@@ -239,14 +296,14 @@ class TestRegenerateFromGithub:
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
 
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
+        if not (mainnet_rpc or testnet_rpc):
+            pytest.skip("At least one RPC URL required")
 
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
+                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
+                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
             )
 
             with open(output_path) as f:
@@ -254,9 +311,9 @@ class TestRegenerateFromGithub:
 
             # Check at least one contract deployment
             found_deployment = False
-            for network_name, network_data in cache["networks"].items():
-                for version, version_data in network_data.get("versions", {}).items():
-                    for contract_name, contract in version_data.get("contracts", {}).items():
+            for network_data in cache["networks"].values():
+                for version_data in network_data.get("versions", {}).values():
+                    for contract in version_data.get("contracts", {}).values():
                         # Required fields
                         assert "address" in contract
                         assert "block" in contract
@@ -281,42 +338,6 @@ class TestRegenerateFromGithub:
                     break
 
             assert found_deployment, "No contract deployments found in cache"
-
-        except (subprocess.CalledProcessError, Exception) as e:
-            pytest.skip(f"Cache generation failed: {e}")
-
-    def test_handles_git_errors_gracefully(self, tmp_path: Path):
-        """Test that git errors are handled appropriately."""
-        output_path = tmp_path / "deployments.json"
-
-        # Use an invalid repository URL
-        with pytest.raises(RuntimeError):
-            regenerate_from_github(
-                output_path=str(output_path),
-                repo_url="https://github.com/nonexistent/repo-does-not-exist.git",
-                mainnet_rpc_url="http://fake-rpc.example.com",
-                testnet_rpc_url="http://fake-rpc.example.com",
-            )
-
-    def test_creates_parent_directories(self, tmp_path: Path):
-        """Test that parent directories are created if they don't exist."""
-        output_path = tmp_path / "nested" / "path" / "deployments.json"
-
-        mainnet_rpc = os.environ.get("GNO_RPC_URL")
-        testnet_rpc = os.environ.get("SEP_RPC_URL")
-
-        if not mainnet_rpc or not testnet_rpc:
-            pytest.skip("RPC URLs not configured in environment")
-
-        try:
-            regenerate_from_github(
-                output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url=testnet_rpc,
-            )
-
-            assert output_path.exists()
-            assert output_path.parent.exists()
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")

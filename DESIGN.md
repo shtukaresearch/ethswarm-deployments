@@ -126,6 +126,20 @@ Two cache files stored in `~/.swarm-deployments/`:
 - **Include if available**: All optional fields when source data provides them
 - **Exclude**: Compiler metadata (63% bloat), devdoc, userdoc, storageLayout
 
+**Partial Cache Support:**
+
+Caches may contain a subset of networks (e.g., only "mainnet" or only "testnet")
+if regenerated with partial RPC configuration. This is intentional and supports:
+
+- **Testing**: Generate cache with single test network
+- **Production**: Use mainnet-only caches in production environments
+- **Development**: Set up one network at a time
+
+When a network is missing from the cache:
+- All DeploymentManager methods raise `NetworkNotFoundError` for that network
+- Use `has_network(network)` to check availability before querying
+- Timestamps are guaranteed present for all cached networks (never None)
+
 ### 2. Block Timestamp Cache (`block_timestamps.json`)
 
 #### Schema
@@ -334,6 +348,21 @@ class DeploymentManager:
             True if contract exists, False otherwise
         """
 
+    def has_network(self, network: str) -> bool:
+        """
+        Check if a network is available in the cache
+
+        Args:
+            network: Network name to check
+
+        Returns:
+            True if network exists in cache, False otherwise
+
+        Notes:
+            Caches may contain only a subset of networks if regenerated
+            with partial RPC configuration
+        """
+
     def metadata(self) -> Dict[str, Any]:
         """
         Get cache metadata (generation time, source repo, networks)
@@ -353,13 +382,42 @@ class DeploymentManager:
             Dictionary with chain_id, chain_name, block_explorer_url
 
         Raises:
-            ValueError: If network not found
+            NetworkNotFoundError: If network not in cache
         """
 ```
 
 ### Module-level Functions
 
 ```python
+def parse_deployments_from_repo(
+    repo_url: str,
+    timestamp_lookup: Callable[[int, str], int],
+) -> Dict[str, Any]:
+    """
+    Parse deployment data from repository (low-level function for testing)
+
+    This function is primarily intended for testing. Use regenerate_from_github()
+    for normal cache generation.
+
+    Args:
+        repo_url: GitHub repository URL to clone and parse
+        timestamp_lookup: Function to get block timestamp
+                         Signature: (block_number: int, network: str) -> timestamp: int
+                         Called for each deployment to resolve block timestamp
+
+    Returns:
+        Deployment cache dictionary (not yet written to disk)
+        Structure matches deployments.json schema
+
+    Raises:
+        RuntimeError: If git operations or parsing fails
+
+    Notes:
+        - Processes all stable versions (tags starting with 'v' without '-rc')
+        - timestamp_lookup is called once per unique (block_number, network) pair
+        - For testing, provide a mock function: lambda block, net: 1600000000 + block
+    """
+
 def regenerate_from_github(
     output_path: Optional[str] = None,
     repo_url: str = "https://github.com/ethersphere/storage-incentives.git",
@@ -383,8 +441,24 @@ def regenerate_from_github(
         Path where deployment cache was saved
 
     Raises:
-        ValueError: If RPC URLs not provided and environment variables not set
+        ValueError: If both RPC URLs missing (need at least one)
         RuntimeError: If regeneration fails
+
+    Notes:
+        Partial cache support: Only networks with valid RPC URLs will be
+        included in the generated cache. This allows:
+        - Testing with single network
+        - Production use of mainnet-only or testnet-only caches
+        - Gradual RPC setup
+
+        If a network is not in the cache, DeploymentManager methods will
+        raise NetworkNotFoundError when querying that network.
+
+    Implementation notes:
+        - Uses parse_deployments_from_repo() internally
+        - Creates timestamp_lookup from RPC URLs and timestamp cache
+        - Processes only networks with available RPC URLs
+        - Saves result to disk and updates timestamp cache
     """
 
 def filter_stable_tags(tags: List[str]) -> List[str]:
@@ -1173,3 +1247,5 @@ Expected coverage (as of 2025-12-21):
 | 1.3 | 2025-12-21 | Updated exception reference table and usage examples to use custom exception types, added note about backward compatibility through inheritance, updated __init__.py to export custom exceptions |
 | 1.4 | 2025-12-21 | Removed implementations from code snippets (timestamp cache management, format detection, parsers, path configuration), added DeploymentFormat enum for type-safe format detection, converted all code examples to specification-style with signatures and docstrings only |
 | 1.5 | 2025-12-22 | Added transformation tables for parser specifications: hardhat-deploy → canonical and legacy → canonical field mappings with JSON paths, types, and contract name mapping |
+| 1.6 | 2025-12-22 | Added parse_deployments_from_repo() function specification to enable testing without RPC dependency through timestamp_lookup callback parameter, maintaining timestamps as required field |
+| 1.7 | 2025-12-22 | Added partial cache support: caches may contain subset of networks based on RPC availability, added has_network() method, updated regenerate_from_github() to require at least one RPC URL and skip networks without RPC, timestamps remain required (int, not Optional) for all cached networks |
