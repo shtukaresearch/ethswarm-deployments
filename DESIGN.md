@@ -297,14 +297,29 @@ class DeploymentManager:
         network: str = "mainnet"
     ) -> List[ContractDeployment]:
         """
-        Get all deployments of a contract across all versions
+        Get all distinct deployments of a contract across all versions
+
+        Returns only unique deployments (by address). If the same contract address
+        appears in multiple versions (e.g., Token contract), only one entry is
+        returned with the earliest version where it appeared.
 
         Args:
             contract_name: Name of contract (canonical or legacy)
             network: Network name ("mainnet" or "testnet")
 
         Returns:
-            List of ContractDeployment objects, sorted by version
+            List of ContractDeployment objects with distinct addresses,
+            sorted chronologically by first appearance (earliest version first)
+
+        Example:
+            If StakeRegistry was deployed at 0xAAA in v0.4.0, then redeployed
+            at 0xBBB in v0.9.1, this returns two deployments:
+            - StakeRegistry at 0xAAA (version="v0.4.0")
+            - StakeRegistry at 0xBBB (version="v0.9.1")
+
+            If Token remains at 0xdBF... across all versions, this returns
+            one deployment:
+            - Token at 0xdBF... (version="v0.4.0")
         """
 
     def event_abi(
