@@ -32,7 +32,7 @@ GitHub Repo → Clone → Parse Deployments → Fetch Timestamps → Cache JSON
 
 Two cache files stored in `~/.ethswarm-deployments/`:
 
-1. **deployments.json** - Main deployment cache (~3-5 MB)
+1. **deployments.json** - Main deployment cache (~2-3 MB)
 2. **block_timestamps.json** - Block timestamp cache (~5-10 KB)
 
 ---
@@ -43,10 +43,14 @@ Two cache files stored in `~/.ethswarm-deployments/`:
 
 #### Schema
 
+The cache uses a **normalized structure** to avoid data duplication:
+- **`deployments`**: Stores each unique contract deployment instance (by address)
+- **`versions`**: Maps version numbers to contract addresses, forming a version manifest
+
 ```json
 {
   "metadata": {
-    "generated_at": "2025-12-21 12:00:00 UTC",
+    "generated_at": "2025-12-22 12:00:00 UTC",
     "source_repo": "https://github.com/ethersphere/storage-incentives",
     "networks": ["mainnet", "testnet"]
   },
@@ -55,42 +59,103 @@ Two cache files stored in `~/.ethswarm-deployments/`:
       "chain_id": 100,
       "chain_name": "Gnosis Chain",
       "block_explorer_url": "https://gnosisscan.io",
+
+      "deployments": {
+        "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da": {
+          "address": "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da",
+          "block": 16514506,
+          "timestamp": 1623417600,
+          "abi": [...],
+          "url": "https://gnosisscan.io/address/0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da",
+          "bytecode": "0x...",
+          "source_format": "bridged"
+        },
+        "0xda2a16EE889E7F04980A8d597b48c8D51B9518F4": {
+          "address": "0xda2a16EE889E7F04980A8d597b48c8D51B9518F4",
+          "block": 25527075,
+          "timestamp": 1671456789,
+          "abi": [...],
+          "url": "https://gnosisscan.io/address/0xda2a16EE889E7F04980A8d597b48c8D51B9518F4",
+          "transaction_hash": "0x...",
+          "bytecode": "0x...",
+          "deployed_bytecode": "0x...",
+          "constructor_args": [...],
+          "solc_input_hash": "...",
+          "num_deployments": 1,
+          "source_format": "hardhat-deploy"
+        },
+        "0x45a1502382541Cd610CC9068e88727426b696293": {
+          "address": "0x45a1502382541Cd610CC9068e88727426b696293",
+          "block": 35961749,
+          "timestamp": 1725984000,
+          "abi": [...],
+          "url": "https://gnosisscan.io/address/0x45a1502382541Cd610CC9068e88727426b696293",
+          "transaction_hash": "0x...",
+          "bytecode": "0x...",
+          "deployed_bytecode": "0x...",
+          "constructor_args": [...],
+          "solc_input_hash": "...",
+          "num_deployments": 2,
+          "source_format": "hardhat-deploy"
+        }
+      },
+
       "versions": {
         "v0.4.0": {
           "contracts": {
-            "StakeRegistry": {
-              "address": "0x...",
-              "block": 25527075,
-              "timestamp": 1671456789,
-              "abi": [...],
-              "url": "https://gnosisscan.io/address/0x...",
-              "transaction_hash": "0x...",
-              "source_format": "legacy",
-              "bytecode": "0x...",
-              "deployed_bytecode": "0x...",
-              "constructor_args": [...],
-              "solc_input_hash": "...",
-              "num_deployments": 1
-            },
-            "Token": {...},
-            "PostageStamp": {...},
-            "PriceOracle": {...},
-            "Redistribution": {...}
+            "Token": "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da",
+            "StakeRegistry": "0xda2a16EE889E7F04980A8d597b48c8D51B9518F4",
+            "PostageStamp": "0x...",
+            "PriceOracle": "0x...",
+            "Redistribution": "0x..."
           }
         },
-        "v0.5.0": {...},
-        "v0.6.0": {...}
+        "v0.5.0": {
+          "contracts": {
+            "Token": "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da",
+            "StakeRegistry": "0xda2a16EE889E7F04980A8d597b48c8D51B9518F4",
+            "PostageStamp": "0x...",
+            "PriceOracle": "0x...",
+            "Redistribution": "0xNEW..."
+          }
+        },
+        "v0.9.1": {
+          "contracts": {
+            "Token": "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da",
+            "StakeRegistry": "0x45a1502382541Cd610CC9068e88727426b696293",
+            "PostageStamp": "0x...",
+            "PriceOracle": "0x...",
+            "Redistribution": "0xNEWER..."
+          }
+        }
       }
     },
     "testnet": {
       "chain_id": 11155111,
       "chain_name": "Sepolia",
       "block_explorer_url": "https://sepolia.etherscan.io",
+      "deployments": {...},
       "versions": {...}
     }
   }
 }
 ```
+
+#### Design Rationale
+
+**Normalized Structure Benefits**:
+1. **No data duplication**: Each deployment instance stored once, referenced by address
+2. **Efficient storage**: ~40% size reduction (Token data not duplicated across 17+ versions)
+3. **Natural token handling**: Token isn't special-cased; it simply has the same address across all versions
+4. **Clean queries**:
+   - `deployment(name, version)` → lookup version → get address → lookup deployment data
+   - `all_deployments(name)` → filter deployments by name (already deduplicated)
+5. **Version manifest clarity**: Each version's `contracts` section shows the active deployment addresses
+
+**Key Design Decisions**:
+- **Plain address keys**: Use `"0xdBF..."` not `"mainnet:0xdBF..."` (deployments already scoped by network)
+- **No stored first_version**: Compute dynamically by scanning versions when needed
+- **Referential integrity**: Version manifests reference deployments that must exist in `deployments` dict
 
 #### Field Descriptions
 
@@ -100,31 +165,46 @@ Two cache files stored in `~/.ethswarm-deployments/`:
 - `networks`: List of networks in cache
 
 **Network-level fields:**
-- `chain_id`: EVM chain ID (100 for mainnet, 10200 for testnet)
+- `chain_id`: EVM chain ID (100 for mainnet, 11155111 for testnet)
 - `chain_name`: Human-readable chain name
 - `block_explorer_url`: Base URL for block explorer
+- `deployments`: Dictionary mapping contract addresses to deployment data (unique instances)
+- `versions`: Dictionary mapping version tags to contract manifests (address references)
 
-**Contract-level fields:**
+**Deployment object fields** (stored in `deployments[address]`)
 
 | Field | Type | Required | Source | Description |
 |-------|------|----------|--------|-------------|
-| `address` | string | Yes | Both | Contract address (checksummed) |
+| `address` | string | Yes | Both | Contract address (checksummed, same as dict key) |
 | `block` | number | Yes | Both | Deployment block number |
 | `timestamp` | number | Yes | RPC | Unix timestamp of deployment block |
 | `abi` | array | Yes | Both | Full contract ABI |
 | `url` | string | Yes | Computed | Block explorer URL for contract |
-| `transaction_hash` | string | No | Hardhat | Deployment transaction hash |
-| `source_format` | string | Yes | Metadata | **Source format preference**: `"hardhat-deploy"` if this deployment data was sourced from `deployments/{network}/*.json`, `"legacy"` if sourced from `{network}_deployed.json`. Indicates the "most preferred" or richest source of deployment information for this contract version. When both formats are available (v0.6.0+), hardhat-deploy is preferred as it contains more metadata (transaction_hash, deployed_bytecode, constructor_args, etc.). |
+| `transaction_hash` | string | No | Hardhat | Deployment transaction hash (or bridge transaction for Token) |
+| `source_format` | string | Yes | Metadata | **Source format**: `"hardhat-deploy"` if sourced from `deployments/{network}/*.json`, `"legacy"` if sourced from `{network}_deployed.json`, `"bridged"` for Token contract (bridged via Omnibridge, not deployed) |
 | `bytecode` | string | No | Both | **Creation bytecode**: Complete code sent during deployment, includes constructor + initialization + runtime code. Larger than deployed_bytecode. |
-| `deployed_bytecode` | string | No | Hardhat | **Runtime bytecode**: Code living on blockchain after deployment, excludes constructor. What actually executes when contract is called. May be null in older deployments. |
-| `constructor_args` | array | No | Hardhat | Constructor arguments used during deployment |
-| `solc_input_hash` | string | No | Hardhat | Hash of Solidity compiler input (changes when source code changes) |
-| `num_deployments` | number | No | Hardhat | Local deployment counter tracked by hardhat-deploy. Increments each time this contract name is deployed in this network directory, regardless of whether bytecode changes. Resets if deployment directory is deleted. |
+| `deployed_bytecode` | string | No | Hardhat | **Runtime bytecode**: Code living on blockchain after deployment, excludes constructor. What actually executes when contract is called. Not available for legacy/bridged contracts. |
+| `constructor_args` | array | No | Hardhat | Constructor arguments used during deployment. Not available for legacy/bridged contracts. |
+| `solc_input_hash` | string | No | Hardhat | Hash of Solidity compiler input (changes when source code changes). Not available for legacy/bridged contracts. |
+| `num_deployments` | number | No | Hardhat | Local deployment counter tracked by hardhat-deploy. Increments each time this contract name is deployed in this network directory, regardless of whether bytecode changes. Resets if deployment directory is deleted. Not available for legacy/bridged contracts. |
+
+**Version manifest fields** (stored in `versions[version_tag].contracts`)
+- Maps canonical contract names to addresses
+- Example: `"Token": "0xdBF3Ea6F5beE45c02255B2c26a16F300502F68da"`
+- Addresses must reference existing entries in the `deployments` dictionary
 
 **Field Inclusion Rules:**
 - **Always include**: address, block, timestamp, abi, url, source_format
 - **Include if available**: All optional fields when source data provides them
 - **Exclude**: Compiler metadata (63% bloat), devdoc, userdoc, storageLayout
+- **Contract name**: Not stored in deployment object; obtained from version manifest lookup
+
+**Special Case: Token Contract**
+
+The Token contract has `source_format: "bridged"` and is missing optional Hardhat fields because:
+- **Not deployed via Hardhat**: The Token was bridged from Ethereum mainnet ([0x19062190b1925b5b6689d7073fdfc8c2976ef8cb](https://etherscan.io/token/0x19062190b1925b5b6689d7073fdfc8c2976ef8cb)) to Gnosis Chain via [Gnosis Omnibridge](https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge) on June 11, 2021
+- **Transaction is bridge call**: The `transaction_hash` field references the Omnibridge `executeAffirmation()` call, not a contract deployment
+- **Same address across versions**: The Token deployment appears with the same address in all versions (v0.4.0+), demonstrating the normalized schema's efficiency
 
 **Partial Cache Support:**
 
@@ -647,20 +727,25 @@ from enum import Enum
 class DeploymentFormat(Enum):
     """
     Deployment file format types.
-    
+
     Value strings define de/serialization law.
+
+    Notes:
+    - HARDHAT_DEPLOY, LEGACY, BRIDGED: Appear as source_format in cache
+    - NONE: Detection result only (tags without deployment files), never appears in cache
     """
     HARDHAT_DEPLOY = "hardhat-deploy"
     LEGACY = "legacy"
-    NONE = "none"
+    BRIDGED = "bridged"  # Token contract (bridged via Omnibridge, not deployed)
+    NONE = "none"  # Detection result only, never in cache
 
 def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
     """
     Detect which deployment format is available in a git tag checkout.
-    
+
     Assumption: any files
     * with json extension found in child directories of ./deployments, or
-    * matching the pattern /{network}_deployed.json in repo root 
+    * matching the pattern /{network}_deployed.json in repo root
     are deployment files.
 
     Args:
@@ -671,6 +756,10 @@ def detect_deployment_format(tag_dir: Path, network: str) -> DeploymentFormat:
         DeploymentFormat.HARDHAT_DEPLOY if deployments/{network}/*.json files exist
         DeploymentFormat.LEGACY if HARDHAT_DEPLOY check fails but {network}_deployed.json file exists
         DeploymentFormat.NONE if no deployment files found
+
+    Note:
+        DeploymentFormat.BRIDGED is never returned by this function - it's assigned
+        programmatically for the Token contract during cache generation.
     """
 ```
 
@@ -1264,3 +1353,4 @@ Expected coverage (as of 2025-12-21):
 | 1.5 | 2025-12-22 | Added transformation tables for parser specifications: hardhat-deploy → canonical and legacy → canonical field mappings with JSON paths, types, and contract name mapping |
 | 1.6 | 2025-12-22 | Added parse_deployments_from_repo() function specification to enable testing without RPC dependency through timestamp_lookup callback parameter, maintaining timestamps as required field |
 | 1.7 | 2025-12-22 | Added partial cache support: caches may contain subset of networks based on RPC availability, added has_network() method, updated regenerate_from_github() to require at least one RPC URL and skip networks without RPC, timestamps remain required (int, not Optional) for all cached networks |
+| 1.8 | 2025-12-22 | **Major schema change**: Normalized cache structure with separate `deployments` (keyed by address) and `versions` (address references) to eliminate duplication. Token contract documented as `source_format: "bridged"` (Omnibridge from Ethereum mainnet). Clarified `all_deployments()` returns distinct deployments only with earliest version. Added `DeploymentFormat.BRIDGED` enum value for Token contract, clarified `NONE` is detection-only. Cache size reduced ~40%. |
