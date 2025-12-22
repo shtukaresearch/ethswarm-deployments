@@ -30,9 +30,9 @@ class TestDetectDeploymentFormat:
         assert result == DeploymentFormat.LEGACY
 
     def test_detects_none_when_no_files_exist(self, tmp_path: Path):
-        """Test returns NONE when no deployment files found."""
+        """Test returns None when no deployment files found."""
         result = detect_deployment_format(tmp_path, "mainnet")
-        assert result == DeploymentFormat.NONE
+        assert result is None
 
     def test_hardhat_deploy_priority_over_legacy(self, tmp_path: Path):
         """Test that hardhat-deploy format is checked first."""
@@ -68,9 +68,9 @@ class TestDetectDeploymentFormat:
         deployments_dir = tmp_path / "deployments" / "mainnet"
         deployments_dir.mkdir(parents=True)
 
-        # Should return NONE because no .json files exist
+        # Should return None because no .json files exist
         result = detect_deployment_format(tmp_path, "mainnet")
-        assert result == DeploymentFormat.NONE
+        assert result is None
 
     def test_deployments_directory_with_non_json_files(self, tmp_path: Path):
         """Test that non-.json files in deployments directory are ignored."""
@@ -79,6 +79,6 @@ class TestDetectDeploymentFormat:
         (deployments_dir / "README.md").write_text("# Readme")
         (deployments_dir / ".gitkeep").write_text("")
 
-        # Should return NONE because no .json files exist
+        # Should return None because no .json files exist
         result = detect_deployment_format(tmp_path, "mainnet")
-        assert result == DeploymentFormat.NONE
+        assert result is None

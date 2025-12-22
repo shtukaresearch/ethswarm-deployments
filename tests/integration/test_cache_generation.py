@@ -254,6 +254,7 @@ class TestCacheStructure:
                 assert "chain_id" in network
                 assert "chain_name" in network
                 assert "block_explorer_url" in network
+                assert "deployments" in network  # Normalized schema
                 assert "versions" in network
 
         except (subprocess.CalledProcessError, Exception) as e:
@@ -309,35 +310,47 @@ class TestCacheStructure:
             with open(output_path) as f:
                 cache = json.load(f)
 
-            # Check at least one contract deployment
+            # Check at least one contract deployment (normalized schema)
             found_deployment = False
             for network_data in cache["networks"].values():
-                for version_data in network_data.get("versions", {}).values():
-                    for contract in version_data.get("contracts", {}).values():
-                        # Required fields
-                        assert "address" in contract
-                        assert "block" in contract
-                        assert "timestamp" in contract
-                        assert "abi" in contract
-                        assert "url" in contract
-                        assert "source_format" in contract
+                # Check deployments dict
+                for address, deployment in network_data.get("deployments", {}).items():
+                    # Required fields
+                    assert "address" in deployment
+                    assert deployment["address"] == address  # Address matches key
+                    assert "block" in deployment
+                    assert "timestamp" in deployment
+                    assert "abi" in deployment
+                    assert "url" in deployment
+                    assert "source_format" in deployment
+                    assert "name" not in deployment  # Name should NOT be present
 
-                        # Validate types
-                        assert isinstance(contract["address"], str)
-                        assert isinstance(contract["block"], int)
-                        assert isinstance(contract["timestamp"], int)
-                        assert isinstance(contract["abi"], list)
-                        assert isinstance(contract["url"], str)
-                        assert contract["source_format"] in ["legacy", "hardhat-deploy"]
+                    # Validate types
+                    assert isinstance(deployment["address"], str)
+                    assert isinstance(deployment["block"], int)
+                    assert isinstance(deployment["timestamp"], int)
+                    assert isinstance(deployment["abi"], list)
+                    assert isinstance(deployment["url"], str)
+                    assert deployment["source_format"] in ["legacy", "hardhat-deploy", "bridged"]
 
-                        found_deployment = True
-                        break
-                    if found_deployment:
-                        break
+                    found_deployment = True
+                    break
                 if found_deployment:
                     break
 
             assert found_deployment, "No contract deployments found in cache"
+
+            # Also check version manifest structure
+            for network_data in cache["networks"].values():
+                for version_data in network_data.get("versions", {}).values():
+                    contracts = version_data.get("contracts", {})
+                    for contract_name, address in contracts.items():
+                        # Should be string addresses, not dicts
+                        assert isinstance(contract_name, str)
+                        assert isinstance(address, str)
+                        assert address.startswith("0x")
+                        # Address should exist in deployments dict
+                        assert address in network_data["deployments"]
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")

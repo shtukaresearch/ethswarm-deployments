@@ -446,7 +446,7 @@ class TestPartialCache:
 
     def test_partial_cache_mainnet_only(self, tmp_path: Path):
         """Test DeploymentManager with cache containing only mainnet."""
-        # Create a partial cache with only mainnet
+        # Create a partial cache with only mainnet (normalized schema)
         partial_cache = {
             "metadata": {
                 "generated_at": "2025-12-22 10:00:00 UTC",
@@ -458,17 +458,20 @@ class TestPartialCache:
                     "chain_id": 100,
                     "chain_name": "Gnosis Chain",
                     "block_explorer_url": "https://gnosisscan.io",
+                    "deployments": {
+                        "0x1234567890123456789012345678901234567890": {
+                            "address": "0x1234567890123456789012345678901234567890",
+                            "block": 25527075,
+                            "timestamp": 1671456789,
+                            "abi": [],
+                            "url": "https://gnosisscan.io/address/0x1234567890123456789012345678901234567890",
+                            "source_format": "legacy"
+                        }
+                    },
                     "versions": {
                         "v0.1.0": {
                             "contracts": {
-                                "Token": {
-                                    "address": "0x1234567890123456789012345678901234567890",
-                                    "block": 25527075,
-                                    "timestamp": 1671456789,
-                                    "abi": [],
-                                    "url": "https://gnosisscan.io/address/0x1234567890123456789012345678901234567890",
-                                    "source_format": "legacy"
-                                }
+                                "Token": "0x1234567890123456789012345678901234567890"
                             }
                         }
                     }

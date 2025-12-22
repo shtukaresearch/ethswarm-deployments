@@ -26,7 +26,7 @@ class TestParseHardhatDeployment:
         assert result["transaction_hash"] == (
             "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901"
         )
-        assert result["bytecode"] == "0x608060405234801561001057600080fd5b50404051"
+        assert result["bytecode"] == "0x608060405234801561001057600080fd5b50604051"
         assert result["deployed_bytecode"] == (
             "0x608060405234801561001057600080fd5b50600436106100"
         )
