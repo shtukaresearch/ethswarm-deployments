@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments import regenerate_from_github
+from ethswarm_deployments import regenerate_from_github
 
 
 class TestRegenerateFromGithubRPC:

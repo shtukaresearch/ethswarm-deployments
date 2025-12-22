@@ -2,7 +2,7 @@
 
 import pytest
 
-from swarm_deployments.exceptions import (
+from ethswarm_deployments.exceptions import (
     CacheNotFoundError,
     ContractNotFoundError,
     DeploymentError,

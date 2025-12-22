@@ -7,7 +7,7 @@ from typing import Dict
 import pytest
 import responses
 
-from swarm_deployments.timestamps import (
+from ethswarm_deployments.timestamps import (
     get_block_timestamp,
     load_timestamp_cache,
     save_timestamp_cache,

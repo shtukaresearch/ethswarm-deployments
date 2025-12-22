@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments.parsers import parse_hardhat_deployment, parse_legacy_deployment
+from ethswarm_deployments.parsers import parse_hardhat_deployment, parse_legacy_deployment
 
 
 class TestParseHardhatDeployment:

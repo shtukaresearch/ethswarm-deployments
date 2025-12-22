@@ -1,5 +1,5 @@
 [project]
-name = "swarm-deployments"
+name = "ethswarm-deployments"
 version = "0.1.0"
 description = "Python library for managing Ethswarm smart contract deployment data across all versions and networks"
 readme = "README.md"
@@ -20,7 +20,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatchling.build.targets.wheel]
-packages = ["src/swarm_deployments"]
+packages = ["src/ethswarm_deployments"]
 
 [tool.ruff]
 line-length = 100

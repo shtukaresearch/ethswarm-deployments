@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments.paths import get_cache_paths, get_default_cache_dir
+from ethswarm_deployments.paths import get_cache_paths, get_default_cache_dir
 
 
 class TestGetDefaultCacheDir:
@@ -15,7 +15,7 @@ class TestGetDefaultCacheDir:
         cache_dir = get_default_cache_dir()
 
         assert isinstance(cache_dir, Path)
-        assert cache_dir.name == ".swarm-deployments"
+        assert cache_dir.name == ".ethswarm-deployments"
 
         # Should be in user's home directory
         home = Path.home()
@@ -46,11 +46,11 @@ class TestGetCachePaths:
         assert isinstance(result[1], Path)
 
     def test_default_paths_in_home_directory(self):
-        """Test that default paths are in ~/.swarm-deployments/."""
+        """Test that default paths are in ~/.ethswarm-deployments/."""
         deployments_path, timestamps_path = get_cache_paths()
 
         home = Path.home()
-        expected_dir = home / ".swarm-deployments"
+        expected_dir = home / ".ethswarm-deployments"
 
         assert deployments_path.parent == expected_dir
         assert timestamps_path.parent == expected_dir

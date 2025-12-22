@@ -1,4 +1,4 @@
-# swarm-deployments Design Document
+# ethswarm-deployments Design Document
 
 ## Overview
 
@@ -30,7 +30,7 @@ GitHub Repo → Clone → Parse Deployments → Fetch Timestamps → Cache JSON
 
 ### Cache Structure
 
-Two cache files stored in `~/.swarm-deployments/`:
+Two cache files stored in `~/.ethswarm-deployments/`:
 
 1. **deployments.json** - Main deployment cache (~3-5 MB)
 2. **block_timestamps.json** - Block timestamp cache (~5-10 KB)
@@ -214,7 +214,7 @@ class DeploymentManager:
 
         Args:
             deployment_json_path: Path to deployments.json
-                                 If None, uses ~/.swarm-deployments/deployments.json
+                                 If None, uses ~/.ethswarm-deployments/deployments.json
 
         Raises:
             FileNotFoundError: If deployment cache not found
@@ -432,7 +432,7 @@ def regenerate_from_github(
 
     Args:
         output_path: Where to save deployments.json
-                    (defaults to ~/.swarm-deployments/deployments.json)
+                    (defaults to ~/.ethswarm-deployments/deployments.json)
         repo_url: GitHub repository URL
         mainnet_rpc_url: Mainnet RPC URL (defaults to $GNO_RPC_URL)
         testnet_rpc_url: Testnet RPC URL (defaults to $SEP_RPC_URL)
@@ -559,10 +559,10 @@ def normalize_contract_name(name: str) -> str:
      - Apply name mapping (legacy → canonical)
      - Extract: address, abi, block, bytecode, url
    - **Repeat for testnet**
-4. **Load timestamp cache** from `~/.swarm-deployments/block_timestamps.json`
+4. **Load timestamp cache** from `~/.ethswarm-deployments/block_timestamps.json`
 5. **Fetch missing timestamps** via RPC for new blocks
 6. **Update timestamp cache** with new entries
-7. **Save deployment cache** to `~/.swarm-deployments/deployments.json`
+7. **Save deployment cache** to `~/.ethswarm-deployments/deployments.json`
 
 ### Timestamp Cache Management
 
@@ -773,10 +773,10 @@ Based on [EIP-3770 chain short names](https://eips.ethereum.org/EIPS/eip-3770):
 
 ### Default Paths
 
-Default cache root: `~/.swarm-deployments/`
+Default cache root: `~/.ethswarm-deployments/`
 
-- Deployment cache: `~/.swarm-deployments/deployments.json`
-- Timestamp cache: `~/.swarm-deployments/block_timestamps.json`
+- Deployment cache: `~/.ethswarm-deployments/deployments.json`
+- Timestamp cache: `~/.ethswarm-deployments/block_timestamps.json`
 
 **Path Configuration**: Future-proofed path management supporting different cache locations:
 
@@ -789,7 +789,7 @@ def get_default_cache_dir() -> Path:
     Get default cache directory (user home)
 
     Returns:
-        Path to ~/.swarm-deployments
+        Path to ~/.ethswarm-deployments
     """
 
 def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
@@ -797,7 +797,7 @@ def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
     Get cache file paths
 
     Args:
-        cache_root: Custom cache directory (defaults to ~/.swarm-deployments)
+        cache_root: Custom cache directory (defaults to ~/.ethswarm-deployments)
 
     Returns:
         Tuple of (deployments_path, timestamps_path)
@@ -811,10 +811,10 @@ def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
 **Usage patterns**:
 ```python
 # User-local (default)
-mgr = DeploymentManager()  # Uses ~/.swarm-deployments/
+mgr = DeploymentManager()  # Uses ~/.ethswarm-deployments/
 
 # Working directory local
-mgr = DeploymentManager(".swarm-deployments/deployments.json")
+mgr = DeploymentManager(".ethswarm-deployments/deployments.json")
 
 # System-wide (requires permissions)
 mgr = DeploymentManager("/var/cache/swarm-deployments/deployments.json")
@@ -853,7 +853,7 @@ NETWORK_CONFIG = {
 ### Basic Usage
 
 ```python
-from swarm_deployments import DeploymentManager
+from ethswarm_deployments import DeploymentManager
 
 mgr = DeploymentManager()
 
@@ -938,7 +938,7 @@ print(f"Explorer: {mainnet_info['block_explorer_url']}")
 ### Cache Regeneration
 
 ```python
-from swarm_deployments import regenerate_from_github
+from ethswarm_deployments import regenerate_from_github
 
 # Full regeneration with custom RPC endpoints
 regenerate_from_github(
@@ -1007,7 +1007,7 @@ class EventNotFoundError(DeploymentError, ValueError):
 
 **Handling cache not found:**
 ```python
-from swarm_deployments import (
+from ethswarm_deployments import (
     DeploymentManager,
     regenerate_from_github,
     CacheNotFoundError
@@ -1031,7 +1031,7 @@ except FileNotFoundError as e:
 
 **Handling missing contracts:**
 ```python
-from swarm_deployments import ContractNotFoundError
+from ethswarm_deployments import ContractNotFoundError
 
 # Using custom exception
 try:
@@ -1055,7 +1055,7 @@ if mgr.has_contract("NewContract", "v0.9.4"):
 
 **Handling invalid versions:**
 ```python
-from swarm_deployments import VersionNotFoundError
+from ethswarm_deployments import VersionNotFoundError
 
 try:
     deployment = mgr.deployment("StakeRegistry", version="v999.0.0")
@@ -1068,7 +1068,7 @@ except VersionNotFoundError as e:
 
 **Handling network errors:**
 ```python
-from swarm_deployments import NetworkNotFoundError
+from ethswarm_deployments import NetworkNotFoundError
 
 try:
     deployment = mgr.deployment("StakeRegistry", network="unknown")
@@ -1081,7 +1081,7 @@ except NetworkNotFoundError as e:
 
 **Handling event lookup failures:**
 ```python
-from swarm_deployments import EventNotFoundError
+from ethswarm_deployments import EventNotFoundError
 
 try:
     event_abi = mgr.event_abi("StakeRegistry", "NonExistentEvent")

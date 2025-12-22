@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments import DeploymentManager
+from ethswarm_deployments import DeploymentManager
 
 
 class TestLegacyNameSupport:
@@ -136,7 +136,7 @@ class TestLegacyNameEdgeCases:
         """Test that unknown legacy names raise appropriate error."""
         mgr = DeploymentManager(str(temp_deployments_cache))
 
-        from swarm_deployments.exceptions import ContractNotFoundError
+        from ethswarm_deployments.exceptions import ContractNotFoundError
 
         with pytest.raises(ContractNotFoundError):
             mgr.deployment("unknownLegacyName", version="v0.2.0", network="mainnet")

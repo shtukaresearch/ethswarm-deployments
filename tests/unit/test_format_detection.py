@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments.parsers import DeploymentFormat, detect_deployment_format
+from ethswarm_deployments.parsers import DeploymentFormat, detect_deployment_format
 
 
 class TestDetectDeploymentFormat:

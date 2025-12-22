@@ -88,7 +88,7 @@ tests/
 - ✓ Tests block numbers stored as strings (JSON requirement)
 
 ### 5. Path Helpers (`test_path_helpers.py`)
-- ✓ Tests get_default_cache_dir() returns ~/.swarm-deployments
+- ✓ Tests get_default_cache_dir() returns ~/.ethswarm-deployments
 - ✓ Tests returned path is absolute
 - ✓ Tests consistency across calls
 - ✓ Tests get_cache_paths() returns tuple of two paths

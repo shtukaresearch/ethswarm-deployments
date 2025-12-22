@@ -31,7 +31,7 @@ def sample_block_timestamps_json(fixtures_dir: Path) -> Dict[str, Any]:
 @pytest.fixture
 def temp_cache_dir(tmp_path: Path) -> Path:
     """Create a temporary cache directory for tests."""
-    cache_dir = tmp_path / ".swarm-deployments"
+    cache_dir = tmp_path / ".ethswarm-deployments"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 

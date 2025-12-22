@@ -1,4 +1,4 @@
-# swarm-deployments
+# ethswarm-deployments
 
 Python library for managing Ethswarm smart contract deployment data across all versions and networks.
 
@@ -21,15 +21,15 @@ This library ingests Swarm smart contract deployment data from the [ethersphere/
 ## Installation
 
 ```bash
-pip install swarm-deployments
+pip install ethswarm-deployments
 ```
 
 ## Quick Start
 
 ```python
-from swarm_deployments import DeploymentManager
+from ethswarm_deployments import DeploymentManager
 
-# Initialize (uses cached data at ~/.swarm-deployments/deployments.json)
+# Initialize (uses cached data at ~/.ethswarm-deployments/deployments.json)
 mgr = DeploymentManager()
 
 # Get latest deployment on mainnet (default)
@@ -51,7 +51,7 @@ all_staking = mgr.all_deployments("StakeRegistry")
 The cache can be regenerated from GitHub:
 
 ```python
-from swarm_deployments import regenerate_from_github
+from ethswarm_deployments import regenerate_from_github
 
 # Regenerate cache (requires RPC endpoints)
 regenerate_from_github(

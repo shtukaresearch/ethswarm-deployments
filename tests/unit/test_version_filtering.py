@@ -2,7 +2,7 @@
 
 import pytest
 
-from swarm_deployments.versions import filter_stable_tags
+from ethswarm_deployments.versions import filter_stable_tags
 
 
 class TestFilterStableTags:

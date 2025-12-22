@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from swarm_deployments import (
+from ethswarm_deployments import (
     ContractNotFoundError,
     DeploymentManager,
     EventNotFoundError,
     NetworkNotFoundError,
     VersionNotFoundError,
 )
-from swarm_deployments.exceptions import CacheNotFoundError
+from ethswarm_deployments.exceptions import CacheNotFoundError
 
 
 class TestDeploymentManagerInitialization:
@@ -25,7 +25,7 @@ class TestDeploymentManagerInitialization:
     def test_initializes_with_default_path(self, temp_deployments_cache: Path, monkeypatch):
         """Test initialization with default cache path."""
         # Mock the default cache path to point to our temp cache
-        from swarm_deployments import paths
+        from ethswarm_deployments import paths
 
         monkeypatch.setattr(
             paths, "get_default_cache_dir", lambda: temp_deployments_cache.parent
