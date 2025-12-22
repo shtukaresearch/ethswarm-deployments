@@ -1,5 +1,5 @@
 """
-swarm-deployments: Python library for managing Ethswarm smart contract deployments
+ethswarm-deployments: Python library for managing Ethswarm smart contract deployments
 """
 
 from .deployments import DeploymentManager, regenerate_from_github

@@ -65,7 +65,7 @@ class TestRegenerateFromGithubRPC:
             result_path = regenerate_from_github(
                 output_path=str(output_path),
                 mainnet_rpc_url=mainnet_rpc,
-                testnet_rpc_url="http://fake-testnet-rpc.example.com",
+                testnet_rpc_url=None,
             )
 
             assert Path(result_path).exists()
@@ -99,7 +99,7 @@ class TestRegenerateFromGithubRPC:
             # Should work with just testnet RPC
             result_path = regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url="http://fake-mainnet-rpc.example.com",
+                mainnet_rpc_url=None,
                 testnet_rpc_url=testnet_rpc,
             )
 
@@ -157,8 +157,8 @@ class TestRegenerateFromGithubRPC:
             # Explicit parameters should be used instead
             result_path = regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
-                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url=testnet_rpc,
             )
             assert Path(result_path).exists()
         except (subprocess.CalledProcessError, Exception) as e:
@@ -187,9 +187,7 @@ class TestRegenerateFromGithubContract:
         with pytest.raises(RuntimeError):
             regenerate_from_github(
                 output_path=str(output_path),
-                repo_url="https://github.com/nonexistent/repo-does-not-exist.git",
-                mainnet_rpc_url="http://fake-rpc.example.com",
-                testnet_rpc_url="http://fake-rpc.example.com",
+                repo_url="https://github.com/nonexistent/repo-does-not-exist.git"
             )
 
     def test_creates_parent_directories(self, tmp_path: Path):
@@ -205,8 +203,8 @@ class TestRegenerateFromGithubContract:
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
-                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url=testnet_rpc,
             )
 
             assert output_path.exists()
@@ -232,8 +230,8 @@ class TestCacheStructure:
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
-                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url=testnet_rpc,
             )
 
             with open(output_path) as f:
@@ -273,8 +271,8 @@ class TestCacheStructure:
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
-                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url=testnet_rpc,
             )
 
             with open(output_path) as f:
@@ -303,8 +301,8 @@ class TestCacheStructure:
         try:
             regenerate_from_github(
                 output_path=str(output_path),
-                mainnet_rpc_url=mainnet_rpc or "http://fake.example.com",
-                testnet_rpc_url=testnet_rpc or "http://fake.example.com",
+                mainnet_rpc_url=mainnet_rpc,
+                testnet_rpc_url=testnet_rpc,
             )
 
             with open(output_path) as f:
