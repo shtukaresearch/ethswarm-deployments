@@ -12,7 +12,7 @@ This library ingests Swarm smart contract deployment data from the [ethersphere/
 
 ## Features
 
-- **Multi-network support**: Query deployments on Gnosis Chain mainnet and Chiado testnet
+- **Multi-network support**: Query deployments on Gnosis Chain mainnet and Sepolia testnet
 - **Version tracking**: Access any version of deployed contracts
 - **Backward compatible**: Supports both legacy (`staking`) and canonical (`StakeRegistry`) contract names
 - **Persistent caching**: Local cache with block timestamp optimization
@@ -56,7 +56,7 @@ from ethswarm_deployments import regenerate_from_github
 # Regenerate cache (requires RPC endpoints)
 regenerate_from_github(
     mainnet_rpc_url="https://rpc.gnosischain.com",
-    testnet_rpc_url="https://rpc.chiadochain.net"
+    testnet_rpc_url="https://ethereum-sepolia-rpc.publicnode.com"
 )
 ```
 
