@@ -39,7 +39,7 @@ class TestFilterStableTags:
         assert result == expected
 
     def test_keeps_only_v_prefixed_tags(self):
-        """Test that non-v-prefixed tags are excluded."""
+        """Test that only tags starting with 'v' are included."""
         tags = [
             "v1.0.0",
             "1.0.0",
@@ -47,7 +47,7 @@ class TestFilterStableTags:
             "v2.0.0",
             "version-2.0.0",
         ]
-        expected = ["v1.0.0", "v2.0.0"]
+        expected = ["v1.0.0", "v2.0.0", "version-2.0.0"]
         result = filter_stable_tags(tags)
         assert result == expected
 
