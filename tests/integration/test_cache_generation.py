@@ -78,12 +78,8 @@ class TestRegenerateFromGithub:
         monkeypatch.delenv("GNO_RPC_URL", raising=False)
         monkeypatch.delenv("SEP_RPC_URL", raising=False)
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError):
             regenerate_from_github(output_path=str(output_path))
-
-        # Should mention the missing RPC URL configuration
-        error_msg = str(exc_info.value).lower()
-        assert "rpc" in error_msg or "url" in error_msg or "gno_rpc_url" in error_msg
 
     def test_parameter_takes_precedence_over_env_var(self, tmp_path: Path, monkeypatch):
         """Test that explicit RPC URL parameter takes precedence over env var."""

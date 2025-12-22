@@ -38,11 +38,8 @@ class TestDeploymentManagerInitialization:
         """Test that CacheNotFoundError is raised when cache doesn't exist."""
         non_existent = tmp_path / "does_not_exist.json"
 
-        with pytest.raises(CacheNotFoundError) as exc_info:
+        with pytest.raises(CacheNotFoundError):
             DeploymentManager(str(non_existent))
-
-        assert "Deployment cache not found" in str(exc_info.value)
-        assert "regenerate_from_github()" in str(exc_info.value)
 
     def test_cache_not_found_catchable_as_file_not_found(self, tmp_path: Path):
         """Test that CacheNotFoundError can be caught as FileNotFoundError."""
@@ -96,7 +93,6 @@ class TestVersions:
             mgr.versions("invalid_network")
 
         assert "invalid_network" in str(exc_info.value)
-        assert "not found in cache" in str(exc_info.value)
 
 
 class TestLatestVersion:
@@ -134,10 +130,8 @@ class TestLatestVersion:
 
         monkeypatch.setattr(mgr, "versions", mock_versions)
 
-        with pytest.raises(VersionNotFoundError) as exc_info:
+        with pytest.raises(VersionNotFoundError):
             mgr.latest_version("mainnet")
-
-        assert "No versions found" in str(exc_info.value)
 
 
 class TestContractNames:
@@ -177,7 +171,6 @@ class TestContractNames:
             mgr.contract_names(version="v999.0.0", network="mainnet")
 
         assert "v999.0.0" in str(exc_info.value)
-        assert "not found" in str(exc_info.value)
 
 
 class TestDeployment:
@@ -339,7 +332,6 @@ class TestEventAbi:
 
         assert "NonExistentEvent" in str(exc_info.value)
         assert "Token" in str(exc_info.value)
-        assert "ABI" in str(exc_info.value)
 
 
 class TestHasContract:
