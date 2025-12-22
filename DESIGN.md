@@ -600,15 +600,33 @@ def parse_hardhat_deployment(file_path: Path) -> Dict[str, Any]:
         - Required: address, block, abi, source_format
         - Optional: transaction_hash, bytecode, deployed_bytecode,
           constructor_args, solc_input_hash, num_deployments
-
-    Implementation notes:
-    - Read JSON file
-    - Extract required fields: address, receipt.blockNumber, abi
-    - Set source_format to "hardhat-deploy"
-    - Extract optional fields if present (transactionHash, bytecode, etc.)
-    - Map hardhat field names to canonical names (e.g., args -> constructor_args)
     """
 ```
+
+#### Hardhat-Deploy → Canonical Transformation
+
+**Input Format**: JSON file from `deployments/{network}/{ContractName}.json`
+
+**Field Mapping**:
+
+| Hardhat Field | JSON Path | Canonical Field | Type | Required | Transformation |
+|---------------|-----------|-----------------|------|----------|----------------|
+| `address` | `.address` | `address` | string | Yes | Identity |
+| `blockNumber` | `.receipt.blockNumber` | `block` | int | Yes | Identity |
+| `abi` | `.abi` | `abi` | array | Yes | Identity |
+| `transactionHash` | `.transactionHash` | `transaction_hash` | string | No | Identity |
+| `bytecode` | `.bytecode` | `bytecode` | string | No | Identity |
+| `deployedBytecode` | `.deployedBytecode` | `deployed_bytecode` | string | No | Identity |
+| `args` | `.args` | `constructor_args` | array | No | Identity |
+| `solcInputHash` | `.solcInputHash` | `solc_input_hash` | string | No | Identity |
+| `numDeployments` | `.numDeployments` | `num_deployments` | int | No | Identity |
+| — | — | `source_format` | string | Yes | Constant: `"hardhat-deploy"` |
+
+**Notes**:
+- All transformations except `source_format` are identity (copy value as-is)
+- Field renames follow snake_case convention
+- Optional fields are omitted from output if not present in input
+- `receipt.blockNumber` is the only nested field extraction
 
 ### Legacy Parser
 
@@ -623,16 +641,48 @@ def parse_legacy_deployment(file_path: Path) -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary mapping canonical contract names to contract data
         Each contract has: address, block, abi, source_format, optional bytecode/url
-
-    Implementation notes:
-    - Read JSON file and extract contracts object
-    - Iterate over contracts (keys are legacy names)
-    - Map legacy names to canonical names using LEGACY_TO_CANONICAL
-    - Extract fields: address, block, abi
-    - Set source_format to "legacy"
-    - Include optional fields if present (bytecode, url)
     """
 ```
+
+#### Legacy → Canonical Transformation
+
+**Input Format**: JSON file `{network}_deployed.json` with structure:
+```json
+{
+  "contracts": {
+    "bzzToken": { ... },
+    "staking": { ... },
+    ...
+  }
+}
+```
+
+**Field Mapping** (per contract):
+
+| Legacy Field | JSON Path | Canonical Field | Type | Required | Transformation |
+|--------------|-----------|-----------------|------|----------|----------------|
+| `address` | `.contracts.{legacy_name}.address` | `address` | string | Yes | Identity |
+| `block` | `.contracts.{legacy_name}.block` | `block` | int | Yes | Identity |
+| `abi` | `.contracts.{legacy_name}.abi` | `abi` | array | Yes | Identity |
+| `bytecode` | `.contracts.{legacy_name}.bytecode` | `bytecode` | string | No | Identity |
+| `url` | `.contracts.{legacy_name}.url` | `url` | string | No | Identity |
+| — | — | `source_format` | string | Yes | Constant: `"legacy"` |
+
+**Contract Name Mapping**:
+
+| Legacy Name (dict key) | Canonical Name (output key) |
+|------------------------|------------------------------|
+| `bzzToken` | `Token` |
+| `staking` | `StakeRegistry` |
+| `postageStamp` | `PostageStamp` |
+| `priceOracle` | `PriceOracle` |
+| `redistribution` | `Redistribution` |
+
+**Notes**:
+- Output dict uses canonical names as keys, not legacy names
+- All field transformations are identity (copy value as-is)
+- Optional fields (`bytecode`, `url`) are omitted from output if not present in input
+- Contract name mapping uses `LEGACY_TO_CANONICAL` constant
 
 ---
 
@@ -1122,3 +1172,4 @@ Expected coverage (as of 2025-12-21):
 | 1.2 | 2025-12-21 | Enhanced field descriptions for bytecode/deployed_bytecode/num_deployments, rewrote error handling for library usage with proper exception hierarchy and handling examples |
 | 1.3 | 2025-12-21 | Updated exception reference table and usage examples to use custom exception types, added note about backward compatibility through inheritance, updated __init__.py to export custom exceptions |
 | 1.4 | 2025-12-21 | Removed implementations from code snippets (timestamp cache management, format detection, parsers, path configuration), added DeploymentFormat enum for type-safe format detection, converted all code examples to specification-style with signatures and docstrings only |
+| 1.5 | 2025-12-22 | Added transformation tables for parser specifications: hardhat-deploy → canonical and legacy → canonical field mappings with JSON paths, types, and contract name mapping |
