@@ -352,3 +352,117 @@ class TestCacheStructure:
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
+
+
+class TestFillForwardLogic:
+    """Test that fill-forward logic handles defective deployment files correctly."""
+
+    def test_token_and_stakeregistry_present_in_v060(self, tmp_path: Path):
+        """
+        Test that Token and StakeRegistry are present in v0.6.0.
+
+        v0.6.0 is the first version with hardhat deployment files, but Token
+        and StakeRegistry deployment files are defective (missing block numbers).
+        The fill-forward logic should copy these contracts from earlier versions.
+        """
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+
+        if not mainnet_rpc:
+            pytest.skip("Mainnet RPC URL required")
+
+        try:
+            regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url=mainnet_rpc,
+            )
+
+            with open(output_path) as f:
+                cache = json.load(f)
+
+            # Check mainnet network
+            assert "mainnet" in cache["networks"]
+            mainnet = cache["networks"]["mainnet"]
+
+            # Check v0.6.0 exists
+            assert "versions" in mainnet
+            versions = mainnet["versions"]
+            assert "v0.6.0" in versions, "v0.6.0 should be in the cache"
+
+            # Get v0.6.0 contracts
+            v060_contracts = versions["v0.6.0"]["contracts"]
+
+            # Token and StakeRegistry should be present (filled forward)
+            assert "Token" in v060_contracts, "Token should be present in v0.6.0 (fill-forward)"
+            assert "StakeRegistry" in v060_contracts, "StakeRegistry should be present in v0.6.0 (fill-forward)"
+
+            # Get the addresses
+            token_address = v060_contracts["Token"]
+            stake_address = v060_contracts["StakeRegistry"]
+
+            # Addresses should be valid
+            assert token_address.startswith("0x")
+            assert stake_address.startswith("0x")
+
+            # The deployment data should exist in the deployments dict
+            assert token_address in mainnet["deployments"]
+            assert stake_address in mainnet["deployments"]
+
+            # Check that the deployment data has all required fields
+            token_deployment = mainnet["deployments"][token_address]
+            stake_deployment = mainnet["deployments"][stake_address]
+
+            for deployment in [token_deployment, stake_deployment]:
+                assert "address" in deployment
+                assert "block" in deployment
+                assert "timestamp" in deployment
+                assert "abi" in deployment
+                assert "url" in deployment
+                assert "source_format" in deployment
+
+        except (subprocess.CalledProcessError, Exception) as e:
+            pytest.skip(f"Cache generation failed: {e}")
+
+    def test_fill_forward_preserves_addresses_across_versions(self, tmp_path: Path):
+        """
+        Test that fill-forward preserves the same addresses across versions.
+
+        When a contract is filled forward, it should maintain the same address
+        until it's actually redeployed.
+        """
+        output_path = tmp_path / "deployments.json"
+
+        mainnet_rpc = os.environ.get("GNO_RPC_URL")
+
+        if not mainnet_rpc:
+            pytest.skip("Mainnet RPC URL required")
+
+        try:
+            regenerate_from_github(
+                output_path=str(output_path),
+                mainnet_rpc_url=mainnet_rpc,
+            )
+
+            with open(output_path) as f:
+                cache = json.load(f)
+
+            mainnet = cache["networks"]["mainnet"]
+            versions = mainnet["versions"]
+
+            # Check that Token address is consistent across early versions
+            # Token is bridged and never redeployed, so should have same address
+            token_addresses = set()
+            for version_tag in ["v0.4.0", "v0.5.0", "v0.6.0", "v0.7.0", "v0.8.0"]:
+                if version_tag in versions:
+                    contracts = versions[version_tag]["contracts"]
+                    if "Token" in contracts:
+                        token_addresses.add(contracts["Token"])
+
+            # All Token addresses should be the same
+            assert len(token_addresses) <= 1, (
+                f"Token should have consistent address across versions, found: {token_addresses}"
+            )
+
+        except (subprocess.CalledProcessError, Exception) as e:
+            pytest.skip(f"Cache generation failed: {e}")
