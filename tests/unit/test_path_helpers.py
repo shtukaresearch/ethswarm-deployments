@@ -10,16 +10,15 @@ from ethswarm_deployments.paths import get_cache_paths, get_default_cache_dir
 class TestGetDefaultCacheDir:
     """Test the get_default_cache_dir function."""
 
-    def test_returns_path_in_user_home(self):
-        """Test that default cache dir is in user's home directory."""
+    def test_returns_path_in_working_directory(self):
+        """Test that default cache dir is in working directory."""
         cache_dir = get_default_cache_dir()
 
         assert isinstance(cache_dir, Path)
         assert cache_dir.name == ".ethswarm-deployments"
 
-        # Should be in user's home directory
-        home = Path.home()
-        assert cache_dir.parent == home
+        # Should be in working directory
+        assert cache_dir.parent == Path.cwd()
 
     def test_returns_absolute_path(self):
         """Test that returned path is absolute."""
@@ -45,12 +44,11 @@ class TestGetCachePaths:
         assert isinstance(result[0], Path)
         assert isinstance(result[1], Path)
 
-    def test_default_paths_in_home_directory(self):
+    def test_default_paths_in_working_directory(self):
         """Test that default paths are in ~/.ethswarm-deployments/."""
         deployments_path, timestamps_path = get_cache_paths()
 
-        home = Path.home()
-        expected_dir = home / ".ethswarm-deployments"
+        expected_dir = Path.cwd() / ".ethswarm-deployments"
 
         assert deployments_path.parent == expected_dir
         assert timestamps_path.parent == expected_dir

@@ -877,10 +877,10 @@ Based on [EIP-3770 chain short names](https://eips.ethereum.org/EIPS/eip-3770):
 
 ### Default Paths
 
-Default cache root: `~/.ethswarm-deployments/`
+Default cache root: `./.ethswarm-deployments/`
 
-- Deployment cache: `~/.ethswarm-deployments/deployments.json`
-- Timestamp cache: `~/.ethswarm-deployments/block_timestamps.json`
+- Deployment cache: `./.ethswarm-deployments/deployments.json`
+- Timestamp cache: `./.ethswarm-deployments/block_timestamps.json`
 
 **Path Configuration**: Future-proofed path management supporting different cache locations:
 
@@ -893,7 +893,7 @@ def get_default_cache_dir() -> Path:
     Get default cache directory (user home)
 
     Returns:
-        Path to ~/.ethswarm-deployments
+        Path to ./.ethswarm-deployments
     """
 
 def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
@@ -901,7 +901,7 @@ def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
     Get cache file paths
 
     Args:
-        cache_root: Custom cache directory (defaults to ~/.ethswarm-deployments)
+        cache_root: Custom cache directory (defaults to ./.ethswarm-deployments)
 
     Returns:
         Tuple of (deployments_path, timestamps_path)

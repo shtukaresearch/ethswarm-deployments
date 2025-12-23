@@ -9,9 +9,9 @@ def get_default_cache_dir() -> Path:
     Get default cache directory (user home).
 
     Returns:
-        Path to ~/.ethswarm-deployments
+        Path to ./.ethswarm-deployments
     """
-    return Path.home() / ".ethswarm-deployments"
+    return Path.cwd() / ".ethswarm-deployments"
 
 
 def get_cache_paths(cache_root: Optional[Union[Path, str]] = None) -> tuple[Path, Path]:
@@ -19,7 +19,7 @@ def get_cache_paths(cache_root: Optional[Union[Path, str]] = None) -> tuple[Path
     Get cache file paths.
 
     Args:
-        cache_root: Custom cache directory (defaults to ~/.ethswarm-deployments)
+        cache_root: Custom cache directory (defaults to ./.ethswarm-deployments)
 
     Returns:
         Tuple of (deployments_path, timestamps_path)
