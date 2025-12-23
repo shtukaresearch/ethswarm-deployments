@@ -2,6 +2,8 @@
 ethswarm-deployments: Python library for managing Ethswarm smart contract deployments
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .deployments import DeploymentManager, regenerate_from_github
 from .exceptions import (
     CacheNotFoundError,
@@ -14,7 +16,10 @@ from .exceptions import (
 )
 from .types import ContractDeployment
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("ethswarm-deployments")
+except PackageNotFoundError:
+    __version__ = None
 
 __all__ = [
     "DeploymentManager",
