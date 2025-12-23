@@ -890,7 +890,7 @@ from typing import Optional
 
 def get_default_cache_dir() -> Path:
     """
-    Get default cache directory (user home)
+    Get default cache directory (working directory)
 
     Returns:
         Path to ./.ethswarm-deployments

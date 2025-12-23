@@ -92,7 +92,7 @@ tests/
 - ✓ Tests returned path is absolute
 - ✓ Tests consistency across calls
 - ✓ Tests get_cache_paths() returns tuple of two paths
-- ✓ Tests default paths in home directory
+- ✓ Tests default paths in working directory
 - ✓ Tests correct filenames (deployments.json, block_timestamps.json)
 - ✓ Tests custom cache root
 - ✓ Tests custom root as string
