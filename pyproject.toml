@@ -1,6 +1,6 @@
 [project]
 name = "ethswarm-deployments"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python library for managing Ethswarm smart contract deployment data across all versions and networks"
 readme = "README.md"
 requires-python = ">=3.10"
