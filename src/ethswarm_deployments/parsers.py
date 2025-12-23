@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .constants import LEGACY_TO_CANONICAL
+from .exceptions import DefectiveDeploymentError
 
 
 class DeploymentFormat(Enum):
@@ -73,22 +74,26 @@ def parse_hardhat_deployment(file_path: Path) -> Dict[str, Any]:
         - Required: address, block, abi, source_format
         - Optional: transaction_hash, bytecode, deployed_bytecode,
           constructor_args, solc_input_hash, num_deployments
+
+    Raises:
+        DefectiveDeploymentError: If block number is missing from deployment file
     """
     with open(file_path) as f:
         data = json.load(f)
 
     # Extract required fields
     # Try to get block number from receipt first, fall back to top-level
-    # Return None if not found - caller can skip or handle missing block numbers
     block_number = None
     if "receipt" in data and "blockNumber" in data["receipt"]:
         block_number = data["receipt"]["blockNumber"]
     elif "blockNumber" in data:
         block_number = data["blockNumber"]
 
-    # If no block number, return None to indicate incomplete data
+    # If no block number, raise error to indicate defective deployment file
     if block_number is None:
-        return None
+        raise DefectiveDeploymentError(
+            f"Missing block number in hardhat deployment file: {file_path}"
+        )
 
     result: Dict[str, Any] = {
         "address": data["address"],

@@ -6,6 +6,7 @@ from .deployments import DeploymentManager, regenerate_from_github
 from .exceptions import (
     CacheNotFoundError,
     ContractNotFoundError,
+    DefectiveDeploymentError,
     DeploymentError,
     EventNotFoundError,
     NetworkNotFoundError,
@@ -25,4 +26,5 @@ __all__ = [
     "VersionNotFoundError",
     "ContractNotFoundError",
     "EventNotFoundError",
+    "DefectiveDeploymentError",
 ]

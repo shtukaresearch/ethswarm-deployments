@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from .constants import NETWORK_CONFIG
+from .exceptions import DefectiveDeploymentError
 from .parsers import DeploymentFormat, detect_deployment_format, parse_hardhat_deployment, parse_legacy_deployment
 from .versions import filter_stable_tags
 
@@ -39,10 +40,10 @@ def _process_hardhat_contracts(
         contract_name = contract_file.stem
 
         # Parse deployment
-        contract_data = parse_hardhat_deployment(contract_file)
-
-        # Skip if incomplete (no block number)
-        if contract_data is None:
+        try:
+            contract_data = parse_hardhat_deployment(contract_file)
+        except DefectiveDeploymentError:
+            # Skip defective deployment files (missing block number)
             continue
 
         address = contract_data["address"]
@@ -143,6 +144,41 @@ def _process_legacy_contracts(
             deployments[address] = deployment_entry
 
     return version_contracts, deployments
+
+
+def _fill_forward_versions(network_data: Dict[str, Any], stable_tags: list[str]) -> None:
+    """
+    Fill forward missing contracts in version manifests.
+
+    If a contract exists in one version but is missing in the next version,
+    copy the contract reference forward to subsequent versions until it appears
+    again or we reach the end.
+
+    This handles cases where deployment files are defective (missing block numbers)
+    for contracts that weren't redeployed (e.g., Token, StakeRegistry in early versions).
+
+    Args:
+        network_data: Network data dict containing 'versions' and 'deployments'
+        stable_tags: Ordered list of version tags to process
+    """
+    versions = network_data["versions"]
+
+    # Track the last known address for each contract name
+    last_known: Dict[str, str] = {}
+
+    # Process versions in order
+    for tag in stable_tags:
+        # Skip if this version has no manifest (no deployments found)
+        if tag not in versions:
+            continue
+
+        contracts: Dict[str, str] = versions[tag]["contracts"]
+
+        # Fill forward: add any contracts from last_known that are missing in current version
+        contracts |= last_known
+
+        # Update last_known with current version's contracts
+        last_known.update(contracts)
 
 
 def _process_tag_for_network(
@@ -310,6 +346,12 @@ def parse_deployments_from_repo(
                 # Add version manifest if we found any contracts
                 if version_contracts:
                     network_data["versions"][tag] = {"contracts": version_contracts}
+
+            # Fill forward missing contracts across versions
+            # This handles defective deployment files where contracts exist but
+            # weren't properly recorded in some versions
+            if network_data["versions"]:
+                _fill_forward_versions(network_data, stable_tags)
 
             # Add network to cache if we found any versions
             if network_data["versions"]:

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from ethswarm_deployments.exceptions import DefectiveDeploymentError
 from ethswarm_deployments.parsers import parse_hardhat_deployment, parse_legacy_deployment
 
 
@@ -127,6 +128,22 @@ class TestParseHardhatDeployment:
 
         with pytest.raises(KeyError):
             parse_hardhat_deployment(test_file)
+
+    def test_missing_block_number_raises_defective_error(self, tmp_path: Path):
+        """Test that missing block number raises DefectiveDeploymentError."""
+        test_file = tmp_path / "defective.json"
+        # Missing block number (neither in receipt nor top-level)
+        data = {
+            "address": "0x1234567890123456789012345678901234567890",
+            "abi": [],
+        }
+        test_file.write_text(json.dumps(data))
+
+        with pytest.raises(DefectiveDeploymentError) as exc_info:
+            parse_hardhat_deployment(test_file)
+
+        # Check error message mentions the file path
+        assert str(test_file) in str(exc_info.value)
 
 
 class TestParseLegacyDeployment:

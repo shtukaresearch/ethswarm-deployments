@@ -35,3 +35,9 @@ class EventNotFoundError(DeploymentError, ValueError):
     """Raised when requested event is not found in contract ABI."""
 
     pass
+
+
+class DefectiveDeploymentError(DeploymentError, ValueError):
+    """Raised when a hardhat deployment file is missing required block number."""
+
+    pass
