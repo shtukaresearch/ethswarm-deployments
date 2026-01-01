@@ -8,7 +8,7 @@ This document specifies the design for a Python library that ingests Swarm smart
 
 1. **Multi-network support**: Handle both mainnet (Gnosis Chain) and testnet (Sepolia) deployments
 2. **Version tracking**: Access any version of deployed contracts (v0.4.0 through latest)
-3. **Efficient caching**: Minimize RPC calls using persistent block timestamp cache
+3. **Efficient caching**: Cache deployment data locally to avoid re-parsing
 4. **Backward compatibility**: Support both legacy and canonical contract names
 5. **Rich metadata**: Include all useful deployment data (bytecode, args, transaction hashes)
 6. **Simple API**: Clean, intuitive interface matching existing patterns
@@ -19,9 +19,9 @@ This document specifies the design for a Python library that ingests Swarm smart
 
 ```
 GitHub Repo → Clone → Parse Deployments → Fetch Timestamps → Cache JSON
-                ↓                              ↑
-         hardhat-deploy/          Block Timestamp Cache
-         legacy formats           (persistent, reusable)
+                ↓
+         hardhat-deploy/
+         legacy formats
                 ↓
          DeploymentManager
                 ↓
@@ -30,10 +30,9 @@ GitHub Repo → Clone → Parse Deployments → Fetch Timestamps → Cache JSON
 
 ### Cache Structure
 
-Two cache files stored in `~/.ethswarm-deployments/`:
+Cache file stored in `~/.ethswarm-deployments/`:
 
-1. **deployments.json** - Main deployment cache (~2-3 MB)
-2. **block_timestamps.json** - Block timestamp cache (~5-10 KB)
+- **deployments.json** - Main deployment cache (~2-3 MB)
 
 ---
 
@@ -219,32 +218,6 @@ When a network is missing from the cache:
 - All DeploymentManager methods raise `NetworkNotFoundError` for that network
 - Use `has_network(network)` to check availability before querying
 - Timestamps are guaranteed present for all cached networks (never None)
-
-### 2. Block Timestamp Cache (`block_timestamps.json`)
-
-#### Schema
-
-```json
-{
-  "mainnet": {
-    "25527075": 1671456789,
-    "25527076": 1671456794,
-    "27391083": 1681228800
-  },
-  "testnet": {
-    "1234567": 1650000000
-  }
-}
-```
-
-#### Purpose
-
-- Cache block timestamps to avoid redundant RPC calls
-- Network-keyed for multi-chain support
-- Block number (as string) → Unix timestamp mapping
-  - **Note**: JSON specification requires object keys to be strings, so block numbers are stored as string keys
-- Persistent across cache regenerations
-- Can be safely deleted (will be regenerated)
 
 ---
 
@@ -523,7 +496,6 @@ def regenerate_from_github(
     Regenerate deployment cache by fetching latest data from GitHub
 
     Processes all stable versions (tags starting with 'v' without '-rc').
-    Uses persistent timestamp cache to minimize RPC calls.
 
     Args:
         output_path: Where to save deployments.json
@@ -551,9 +523,9 @@ def regenerate_from_github(
 
     Implementation notes:
         - Uses parse_deployments_from_repo() internally
-        - Creates timestamp_lookup from RPC URLs and timestamp cache
+        - Creates timestamp_lookup from RPC URLs
         - Processes only networks with available RPC URLs
-        - Saves result to disk and updates timestamp cache
+        - Saves result to disk
     """
 
 def filter_stable_tags(tags: List[str]) -> List[str]:
@@ -654,70 +626,8 @@ def normalize_contract_name(name: str) -> str:
      - Apply name mapping (legacy → canonical)
      - Extract: address, abi, block, bytecode, url
    - **Repeat for testnet**
-4. **Load timestamp cache** from `~/.ethswarm-deployments/block_timestamps.json`
-5. **Fetch missing timestamps** via RPC for new blocks
-6. **Update timestamp cache** with new entries
-7. **Save deployment cache** to `~/.ethswarm-deployments/deployments.json`
-
-### Timestamp Cache Management
-
-**Loading:**
-```python
-def load_timestamp_cache(cache_path: Path) -> Dict[str, Dict[str, int]]:
-    """
-    Load existing timestamp cache or return empty dict
-
-    Args:
-        cache_path: Path to block_timestamps.json file
-
-    Returns:
-        Dictionary mapping network -> block_number_str -> timestamp
-        Empty structure if file doesn't exist
-    """
-```
-
-**Saving:**
-```python
-def save_timestamp_cache(cache: Dict[str, Dict[str, int]], cache_path: Path):
-    """
-    Save updated timestamp cache to disk
-
-    Args:
-        cache: Timestamp cache dictionary
-        cache_path: Path to block_timestamps.json file
-
-    Creates parent directories if they don't exist
-    """
-```
-
-**Fetching:**
-```python
-def get_block_timestamp(
-    block_number: int,
-    network: str,
-    rpc_url: str,
-    cache: Dict[str, Dict[str, int]]
-) -> int:
-    """
-    Get block timestamp, using cache or fetching via RPC
-
-    Args:
-        block_number: Block number to get timestamp for
-        network: Network name ("mainnet" or "testnet")
-        rpc_url: RPC endpoint URL
-        cache: Timestamp cache (will be updated if RPC call is made)
-
-    Returns:
-        Unix timestamp of the block
-
-    Implementation notes:
-    - Check cache first (network -> str(block_number) lookup)
-    - If not cached, make RPC call via eth_getBlockByNumber
-    - Parse hex timestamp from response
-    - Update cache with new value
-    - Return timestamp
-    """
-```
+4. **Fetch timestamps** via RPC for deployment blocks
+5. **Save deployment cache** to `~/.ethswarm-deployments/deployments.json`
 
 ### Format Detection
 
@@ -880,7 +790,6 @@ Based on [EIP-3770 chain short names](https://eips.ethereum.org/EIPS/eip-3770):
 Default cache root: `./.ethswarm-deployments/`
 
 - Deployment cache: `./.ethswarm-deployments/deployments.json`
-- Timestamp cache: `./.ethswarm-deployments/block_timestamps.json`
 
 **Path Configuration**: Future-proofed path management supporting different cache locations:
 
@@ -896,19 +805,19 @@ def get_default_cache_dir() -> Path:
         Path to ./.ethswarm-deployments
     """
 
-def get_cache_paths(cache_root: Optional[Path] = None) -> tuple[Path, Path]:
+def get_cache_path(cache_root: Optional[Path] = None) -> Path:
     """
-    Get cache file paths
+    Get cache file path
 
     Args:
         cache_root: Custom cache directory (defaults to ./.ethswarm-deployments)
 
     Returns:
-        Tuple of (deployments_path, timestamps_path)
+        Path to deployments.json
 
     Implementation notes:
     - If cache_root is None, use get_default_cache_dir()
-    - Return tuple of cache_root/deployments.json and cache_root/block_timestamps.json
+    - Return cache_root/deployments.json
     """
 ```
 
@@ -1230,7 +1139,6 @@ except RuntimeError as e:
 - Contract name normalization (legacy ↔ canonical)
 - Version filtering (stable tags only)
 - Format detection (hardhat-deploy vs legacy)
-- Timestamp cache hit/miss
 - Parser edge cases (missing optional fields)
 
 ### Integration Tests
@@ -1256,8 +1164,6 @@ Create minimal test fixture repository with:
 ### Cache Size
 
 - **Deployment cache**: ~3-5 MB (all versions, both networks)
-- **Timestamp cache**: ~5-10 KB
-- **Total**: ~5 MB (trivial for modern systems)
 
 ### Load Time
 
@@ -1266,12 +1172,7 @@ Create minimal test fixture repository with:
 
 ### Regeneration Time
 
-With timestamp cache:
-- First run: ~2-3 minutes (clone + parse + RPC calls)
-- Subsequent runs: ~30-60 seconds (most timestamps cached)
-
-Without timestamp cache:
-- Every run: ~2-3 minutes (full RPC calls)
+- Full regeneration: ~2-3 minutes (clone + parse + RPC calls)
 
 ### Optimization Strategies
 
@@ -1355,3 +1256,4 @@ Expected coverage (as of 2025-12-21):
 | 1.7 | 2025-12-22 | Added partial cache support: caches may contain subset of networks based on RPC availability, added has_network() method, updated regenerate_from_github() to require at least one RPC URL and skip networks without RPC, timestamps remain required (int, not Optional) for all cached networks |
 | 1.8 | 2025-12-22 | **Major schema change**: Normalized cache structure with separate `deployments` (keyed by address) and `versions` (address references) to eliminate duplication. Token contract documented as `source_format: "bridged"` (Omnibridge from Ethereum mainnet). Clarified `all_deployments()` returns distinct deployments only with earliest version. Added `DeploymentFormat.BRIDGED` enum value for Token contract, clarified `NONE` is detection-only. Cache size reduced ~40%. |
 | 1.9 | 2025-12-22 | Removed `name` field from deployment objects (redundant, obtained from version manifest). Removed `DeploymentFormat.NONE`, replaced with `Optional[DeploymentFormat]` return type for `detect_deployment_format()`. Enum now only contains values that appear in cache. |
+| 2.0 | 2026-01-01 | Removed timestamp cache: eliminated `block_timestamps.json` file, timestamp cache management functions, and `get_cache_paths()` (now `get_cache_path()` returning single path). Timestamps are now fetched fresh during each regeneration. |
