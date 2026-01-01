@@ -15,9 +15,10 @@ from .exceptions import (
 )
 from .ingestion import parse_deployments_from_repo
 from .parsers import normalize_contract_name
-from .paths import get_cache_paths, get_default_cache_dir
-from .timestamps import get_block_timestamp, load_timestamp_cache, save_timestamp_cache
+from .paths import get_cache_path, get_default_cache_dir
 from .types import ContractDeployment
+
+import requests
 
 
 class DeploymentManager:
@@ -35,7 +36,7 @@ class DeploymentManager:
             CacheNotFoundError: If deployment cache not found
         """
         if deployment_json_path is None:
-            deployment_json_path = str(get_cache_paths()[0])
+            deployment_json_path = str(get_cache_path())
 
         cache_path = Path(deployment_json_path)
         if not cache_path.exists():
@@ -356,7 +357,7 @@ class DeploymentManager:
 
 
 def regenerate_from_github(
-    output_path: Optional[str] = None,
+    cache_dir: Optional[str] = None,
     repo_url: str = "https://github.com/ethersphere/storage-incentives.git",
     mainnet_rpc_url: Optional[str] = None,
     testnet_rpc_url: Optional[str] = None,
@@ -365,11 +366,10 @@ def regenerate_from_github(
     Regenerate deployment cache by fetching latest data from GitHub.
 
     Processes all stable versions (tags starting with 'v' without '-rc').
-    Uses persistent timestamp cache to minimize RPC calls.
 
     Args:
-        output_path: Where to save deployments.json
-                    (defaults to ~/.ethswarm-deployments/deployments.json)
+        cache_dir: Directory where cache files will be saved
+                  (defaults to ./.ethswarm-deployments)
         repo_url: GitHub repository URL
         mainnet_rpc_url: Mainnet RPC URL (defaults to $GNO_RPC_URL)
         testnet_rpc_url: Testnet RPC URL (defaults to $SEP_RPC_URL)
@@ -394,15 +394,9 @@ def regenerate_from_github(
             "or pass mainnet_rpc_url or testnet_rpc_url parameter"
         )
 
-    # Determine output path
-    if output_path is None:
-        output_path = str(get_cache_paths()[0])
-
-    output_path_obj = Path(output_path)
-    timestamp_cache_path = output_path_obj.parent / "block_timestamps.json"
-
-    # Load existing timestamp cache
-    timestamp_cache = load_timestamp_cache(timestamp_cache_path)
+    # Get cache path
+    cache_dir_path = Path(cache_dir) if cache_dir else get_default_cache_dir()
+    deployments_path = get_cache_path(cache_dir_path)
 
     # Create timestamp lookup function
     def timestamp_lookup(block_number: int, network: str) -> int:
@@ -418,7 +412,32 @@ def regenerate_from_github(
         if rpc_url is None:
             raise ValueError(f"No RPC URL configured for network '{network}'")
 
-        return get_block_timestamp(block_number, network, rpc_url, timestamp_cache)
+        # Make RPC call to get block timestamp
+        try:
+            response = requests.post(
+                rpc_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "eth_getBlockByNumber",
+                    "params": [hex(block_number), False],
+                    "id": 1,
+                },
+                timeout=30,
+            )
+
+            if response.status_code != 200:
+                raise RuntimeError(f"RPC request failed with status {response.status_code}")
+
+            result = response.json()
+
+            if "error" in result:
+                raise ValueError(f"RPC error: {result['error']}")
+
+            timestamp_hex = result["result"]["timestamp"]
+            return int(timestamp_hex, 16)
+
+        except requests.RequestException as e:
+            raise RuntimeError(f"Network error during RPC call: {e}") from e
 
     # Parse deployments from repo
     cache_data = parse_deployments_from_repo(repo_url, timestamp_lookup)
@@ -429,11 +448,8 @@ def regenerate_from_github(
     )
 
     # Save deployment cache
-    output_path_obj.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path_obj, "w") as f:
+    cache_dir_path.mkdir(parents=True, exist_ok=True)
+    with open(deployments_path, "w") as f:
         json.dump(cache_data, f, indent=2)
 
-    # Save updated timestamp cache
-    save_timestamp_cache(timestamp_cache, timestamp_cache_path)
-
-    return str(output_path_obj)
+    return str(deployments_path)

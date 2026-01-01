@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ethswarm_deployments.paths import get_cache_paths, get_default_cache_dir
+from ethswarm_deployments.paths import get_cache_path, get_default_cache_dir
 
 
 class TestGetDefaultCacheDir:
@@ -32,66 +32,56 @@ class TestGetDefaultCacheDir:
         assert dir1 == dir2
 
 
-class TestGetCachePaths:
-    """Test the get_cache_paths function."""
+class TestGetCachePath:
+    """Test the get_cache_path function."""
 
-    def test_returns_tuple_of_two_paths(self):
-        """Test that function returns a tuple of two Path objects."""
-        result = get_cache_paths()
+    def test_returns_path_object(self):
+        """Test that function returns a Path object."""
+        result = get_cache_path()
 
-        assert isinstance(result, tuple)
-        assert len(result) == 2
-        assert isinstance(result[0], Path)
-        assert isinstance(result[1], Path)
+        assert isinstance(result, Path)
 
-    def test_default_paths_in_working_directory(self):
-        """Test that default paths are in ~/.ethswarm-deployments/."""
-        deployments_path, timestamps_path = get_cache_paths()
+    def test_default_path_in_working_directory(self):
+        """Test that default path is in ./.ethswarm-deployments/."""
+        deployments_path = get_cache_path()
 
         expected_dir = Path.cwd() / ".ethswarm-deployments"
 
         assert deployments_path.parent == expected_dir
-        assert timestamps_path.parent == expected_dir
 
-    def test_default_filenames(self):
-        """Test that default filenames are correct."""
-        deployments_path, timestamps_path = get_cache_paths()
+    def test_default_filename(self):
+        """Test that default filename is correct."""
+        deployments_path = get_cache_path()
 
         assert deployments_path.name == "deployments.json"
-        assert timestamps_path.name == "block_timestamps.json"
 
     def test_custom_cache_root(self, tmp_path: Path):
         """Test using a custom cache root directory."""
         custom_root = tmp_path / "custom_cache"
-        deployments_path, timestamps_path = get_cache_paths(cache_root=custom_root)
+        deployments_path = get_cache_path(cache_root=custom_root)
 
         assert deployments_path.parent == custom_root
-        assert timestamps_path.parent == custom_root
         assert deployments_path.name == "deployments.json"
-        assert timestamps_path.name == "block_timestamps.json"
 
     def test_custom_cache_root_as_string(self, tmp_path: Path):
         """Test that custom cache root can be provided as string."""
         custom_root = str(tmp_path / "string_cache")
-        deployments_path, timestamps_path = get_cache_paths(cache_root=custom_root)
+        deployments_path = get_cache_path(cache_root=custom_root)
 
         assert deployments_path.parent == Path(custom_root)
-        assert timestamps_path.parent == Path(custom_root)
 
     def test_none_cache_root_uses_default(self):
         """Test that None cache_root parameter uses default."""
-        default_deployments, default_timestamps = get_cache_paths(cache_root=None)
-        no_arg_deployments, no_arg_timestamps = get_cache_paths()
+        default_deployments = get_cache_path(cache_root=None)
+        no_arg_deployments = get_cache_path()
 
         assert default_deployments == no_arg_deployments
-        assert default_timestamps == no_arg_timestamps
 
-    def test_paths_are_absolute(self):
-        """Test that returned paths are absolute."""
-        deployments_path, timestamps_path = get_cache_paths()
+    def test_path_is_absolute(self):
+        """Test that returned path is absolute."""
+        deployments_path = get_cache_path()
 
         assert deployments_path.is_absolute()
-        assert timestamps_path.is_absolute()
 
     def test_relative_custom_root_converted_to_absolute(self, tmp_path: Path, monkeypatch):
         """Test that relative custom root is converted to absolute path."""
@@ -99,8 +89,7 @@ class TestGetCachePaths:
         monkeypatch.chdir(tmp_path)
 
         # Use relative path
-        deployments_path, timestamps_path = get_cache_paths(cache_root="relative_cache")
+        deployments_path = get_cache_path(cache_root="relative_cache")
 
-        # Paths should be absolute
+        # Path should be absolute
         assert deployments_path.is_absolute()
-        assert timestamps_path.is_absolute()

@@ -22,7 +22,6 @@ tests/
 │   ├── test_version_filtering.py               # filter_stable_tags() tests
 │   ├── test_format_detection.py                # detect_deployment_format() tests
 │   ├── test_parsers.py                         # Parser function tests
-│   ├── test_timestamp_cache.py                 # Timestamp cache tests
 │   ├── test_path_helpers.py                    # Path utility tests
 │   └── test_exceptions.py                      # Exception hierarchy tests
 └── integration/                                # Integration tests
@@ -32,7 +31,7 @@ tests/
     └── test_backward_compatibility.py          # Legacy name support tests
 ```
 
-## Unit Tests (6 test modules)
+## Unit Tests (5 test modules)
 
 **Note**: Contract name normalization is tested only at the integration level in `test_backward_compatibility.py`, as the mapping is a fixed constant with no algorithmic logic to unit test.
 
@@ -71,36 +70,19 @@ tests/
 - ✓ Tests inclusion of optional fields (bytecode, url)
 - ✓ Tests all legacy contract names
 
-### 4. Timestamp Cache (`test_timestamp_cache.py`)
-- ✓ Tests load_timestamp_cache() with existing file
-- ✓ Tests loading from non-existent file (returns empty)
-- ✓ Tests handling of empty/corrupted JSON
-- ✓ Tests save_timestamp_cache() to disk
-- ✓ Tests creation of parent directories
-- ✓ Tests overwriting existing files
-- ✓ Tests get_block_timestamp() cache hit (no RPC call)
-- ✓ Tests cache miss (makes RPC call via responses library)
-- ✓ Tests cache update after RPC call
-- ✓ Tests network-specific cache handling
-- ✓ Tests RPC request format (JSON-RPC)
-- ✓ Tests RPC error handling
-- ✓ Tests network error handling
-- ✓ Tests block numbers stored as strings (JSON requirement)
-
-### 5. Path Helpers (`test_path_helpers.py`)
-- ✓ Tests get_default_cache_dir() returns ~/.ethswarm-deployments
+### 4. Path Helpers (`test_path_helpers.py`)
+- ✓ Tests get_default_cache_dir() returns ./.ethswarm-deployments
 - ✓ Tests returned path is absolute
 - ✓ Tests consistency across calls
-- ✓ Tests get_cache_paths() returns tuple of two paths
-- ✓ Tests default paths in working directory
-- ✓ Tests correct filenames (deployments.json, block_timestamps.json)
+- ✓ Tests get_cache_path() returns Path to deployments.json
+- ✓ Tests default path in working directory
 - ✓ Tests custom cache root
 - ✓ Tests custom root as string
 - ✓ Tests None cache_root uses default
-- ✓ Tests paths are absolute
+- ✓ Tests path is absolute
 - ✓ Tests relative custom root converted to absolute
 
-### 6. Exceptions (`test_exceptions.py`)
+### 5. Exceptions (`test_exceptions.py`)
 - ✓ Tests CacheNotFoundError catchable as FileNotFoundError
 - ✓ Tests CacheNotFoundError catchable as DeploymentError
 - ✓ Tests NetworkNotFoundError catchable as ValueError
@@ -185,7 +167,6 @@ tests/
 - ✓ Tests ValueError when RPC URLs missing
 - ✓ Tests parameter precedence over environment variable
 - ✓ Tests default output path (skipped to avoid modifying user cache)
-- ✓ Tests timestamp cache reused across runs
 - ✓ Tests stable tags filtering (no -rc versions)
 - ✓ Tests cache contains required metadata
 - ✓ Tests contract deployments have all required fields
@@ -214,17 +195,14 @@ tests/
 
 ### Sample Data
 - **sample_deployments.json**: Complete mock cache with 2 versions (v0.1.0, v0.2.0), 2 contracts (Token, StakeRegistry), 2 networks (mainnet, testnet)
-- **sample_block_timestamps.json**: Mock timestamp cache with sample block→timestamp mappings
 - **hardhat_deploy/StakeRegistry.json**: Sample hardhat-deploy format file
 - **legacy/mainnet_deployed.json**: Sample legacy format file with bzzToken and staking contracts
 
 ### Shared Fixtures (conftest.py)
 - `fixtures_dir`: Path to fixtures directory
 - `sample_deployments_json`: Loaded deployment cache data
-- `sample_block_timestamps_json`: Loaded timestamp cache data
 - `temp_cache_dir`: Temporary cache directory
 - `temp_deployments_cache`: Temporary deployments.json with sample data
-- `temp_timestamps_cache`: Temporary block_timestamps.json with sample data
 - `hardhat_deploy_sample`: Path to hardhat-deploy sample file
 - `legacy_deploy_sample`: Path to legacy sample file
 
@@ -281,7 +259,6 @@ pytest tests/unit/test_version_filtering.py::TestFilterStableTags::test_filters_
 ✓ **Version filtering** - Stable tag detection
 ✓ **Format detection** - Hardhat-deploy vs legacy
 ✓ **File parsing** - Both deployment formats
-✓ **Timestamp caching** - Load, save, RPC integration
 ✓ **Path management** - Default and custom paths
 ✓ **Exception handling** - All error conditions
 ✓ **DeploymentManager API** - All public methods
@@ -290,8 +267,7 @@ pytest tests/unit/test_version_filtering.py::TestFilterStableTags::test_filters_
 
 ## Notes
 
-- Tests use `responses` library for HTTP mocking (RPC calls)
-- Integration tests for cache generation use the real storage-incentives repo
+- Integration tests for cache generation use the real storage-incentives repo and make real RPC calls
 - Tests avoid modifying the user's default cache location
 - All error messages tested match DESIGN.md specification
 - Exception inheritance allows catching as both custom and standard types

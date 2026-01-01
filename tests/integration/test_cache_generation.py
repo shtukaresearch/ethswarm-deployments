@@ -15,7 +15,8 @@ class TestRegenerateFromGithubRPC:
 
     def test_regenerates_cache_with_both_rpcs(self, tmp_path: Path):
         """Test cache regeneration with both mainnet and testnet RPC URLs."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -25,16 +26,16 @@ class TestRegenerateFromGithubRPC:
 
         try:
             result_path = regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
 
             assert Path(result_path).exists()
-            assert Path(result_path) == output_path
+            assert Path(result_path) == deployments_path
 
             # Verify basic cache structure
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             assert "metadata" in cache
@@ -49,7 +50,8 @@ class TestRegenerateFromGithubRPC:
 
     def test_regenerates_with_mainnet_rpc_only(self, tmp_path: Path):
         """Test cache regeneration with only mainnet RPC URL."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -63,14 +65,14 @@ class TestRegenerateFromGithubRPC:
         try:
             # Should work with just mainnet RPC
             result_path = regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=None,
             )
 
             assert Path(result_path).exists()
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Should have mainnet data
@@ -84,7 +86,8 @@ class TestRegenerateFromGithubRPC:
 
     def test_regenerates_with_testnet_rpc_only(self, tmp_path: Path):
         """Test cache regeneration with only testnet RPC URL."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -98,14 +101,14 @@ class TestRegenerateFromGithubRPC:
         try:
             # Should work with just testnet RPC
             result_path = regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=None,
                 testnet_rpc_url=testnet_rpc,
             )
 
             assert Path(result_path).exists()
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Should have testnet data
@@ -119,7 +122,8 @@ class TestRegenerateFromGithubRPC:
 
     def test_uses_environment_variables_for_rpc_urls(self, tmp_path: Path, monkeypatch):
         """Test that RPC URLs are read from environment variables."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -134,14 +138,15 @@ class TestRegenerateFromGithubRPC:
             monkeypatch.setenv("SEP_RPC_URL", testnet_rpc)
 
         try:
-            result_path = regenerate_from_github(output_path=str(output_path))
+            result_path = regenerate_from_github(cache_dir=str(cache_dir))
             assert Path(result_path).exists()
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
 
     def test_parameter_takes_precedence_over_env_var(self, tmp_path: Path, monkeypatch):
         """Test that explicit RPC URL parameter takes precedence over env var."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -156,7 +161,7 @@ class TestRegenerateFromGithubRPC:
         try:
             # Explicit parameters should be used instead
             result_path = regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
@@ -170,29 +175,30 @@ class TestRegenerateFromGithubContract:
 
     def test_raises_error_when_rpc_urls_missing(self, tmp_path: Path, monkeypatch):
         """Test that ValueError is raised when RPC URLs are not provided."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
 
         # Clear environment variables
         monkeypatch.delenv("GNO_RPC_URL", raising=False)
         monkeypatch.delenv("SEP_RPC_URL", raising=False)
 
         with pytest.raises(ValueError):
-            regenerate_from_github(output_path=str(output_path))
+            regenerate_from_github(cache_dir=str(cache_dir))
 
     def test_handles_git_errors_gracefully(self, tmp_path: Path):
         """Test that git errors raise RuntimeError."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
 
         # Use an invalid repository URL
         with pytest.raises(RuntimeError):
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 repo_url="https://github.com/nonexistent/repo-does-not-exist.git"
             )
 
     def test_creates_parent_directories(self, tmp_path: Path):
         """Test that parent directories are created if they don't exist."""
-        output_path = tmp_path / "nested" / "path" / "deployments.json"
+        cache_dir = tmp_path / "nested" / "path"
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -202,13 +208,13 @@ class TestRegenerateFromGithubContract:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
 
-            assert output_path.exists()
-            assert output_path.parent.exists()
+            assert deployments_path.exists()
+            assert deployments_path.parent.exists()
 
         except (subprocess.CalledProcessError, Exception) as e:
             pytest.skip(f"Cache generation failed: {e}")
@@ -219,7 +225,8 @@ class TestCacheStructure:
 
     def test_cache_contains_required_metadata(self, tmp_path: Path):
         """Test that generated cache contains all required metadata."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -229,12 +236,12 @@ class TestCacheStructure:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Check top-level metadata
@@ -260,7 +267,8 @@ class TestCacheStructure:
 
     def test_stable_tags_filtering(self, tmp_path: Path):
         """Test that only stable tags are processed during regeneration."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -270,12 +278,12 @@ class TestCacheStructure:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Check that versions don't include -rc versions
@@ -290,7 +298,8 @@ class TestCacheStructure:
 
     def test_contract_deployments_have_required_fields(self, tmp_path: Path):
         """Test that contract deployments have all required fields."""
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
         testnet_rpc = os.environ.get("SEP_RPC_URL")
@@ -300,12 +309,12 @@ class TestCacheStructure:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
                 testnet_rpc_url=testnet_rpc,
             )
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Check at least one contract deployment (normalized schema)
@@ -365,7 +374,8 @@ class TestFillForwardLogic:
         and StakeRegistry deployment files are defective (missing block numbers).
         The fill-forward logic should copy these contracts from earlier versions.
         """
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
 
@@ -374,11 +384,11 @@ class TestFillForwardLogic:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
             )
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             # Check mainnet network
@@ -431,7 +441,8 @@ class TestFillForwardLogic:
         When a contract is filled forward, it should maintain the same address
         until it's actually redeployed.
         """
-        output_path = tmp_path / "deployments.json"
+        cache_dir = tmp_path
+        deployments_path = cache_dir / "deployments.json"
 
         mainnet_rpc = os.environ.get("GNO_RPC_URL")
 
@@ -440,11 +451,11 @@ class TestFillForwardLogic:
 
         try:
             regenerate_from_github(
-                output_path=str(output_path),
+                cache_dir=str(cache_dir),
                 mainnet_rpc_url=mainnet_rpc,
             )
 
-            with open(output_path) as f:
+            with open(deployments_path) as f:
                 cache = json.load(f)
 
             mainnet = cache["networks"]["mainnet"]
