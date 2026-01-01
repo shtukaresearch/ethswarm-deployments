@@ -175,7 +175,7 @@ def _fill_forward_versions(network_data: Dict[str, Any], stable_tags: list[str])
         contracts: Dict[str, str] = versions[tag]["contracts"]
 
         # Fill forward: add any contracts from last_known that are missing in current version
-        contracts |= last_known
+        last_known |= contracts
 
         # Update last_known with current version's contracts
         last_known.update(contracts)
