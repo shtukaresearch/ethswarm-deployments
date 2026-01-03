@@ -1,12 +1,17 @@
 [project]
 name = "ethswarm-deployments"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python library for managing Ethswarm smart contract deployment data across all versions and networks"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.31.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/shtukaresearch/ethswarm-deployments"
+Repository = "https://github.com/shtukaresearch/ethswarm-deployments"
+Issues = "https://github.com/shtukaresearch/ethswarm-deployments/issues"
 
 [project.optional-dependencies]
 dev = [
