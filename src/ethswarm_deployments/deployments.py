@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .exceptions import (
     CacheNotFoundError,
@@ -24,7 +24,7 @@ import requests
 class DeploymentManager:
     """Manages contract deployment information across networks and versions."""
 
-    def __init__(self, deployment_json_path: Optional[str] = None):
+    def __init__(self, deployment_json_path: Optional[Union[str, os.PathLike]] = None):
         """
         Initialize the deployment manager.
 
